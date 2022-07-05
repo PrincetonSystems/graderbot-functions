@@ -20,7 +20,11 @@ wave water resonance sun log dream cherry tree fog
 frost voice paper frog smoke star""".split()
 
 def handle(req, syscall):
-    assignments = json.loads(syscall.read_key(b'cos316/assignments'))
+    org = 'cos316'
+    # First, read the class-specific assignment configuration file,
+    # including names of existing asignments and their group sizes.
+    l_class = syscall.new_dclabel([[org]], [[org]])
+    assignments = json.loads(syscall.fs_read([l_class, 'assignments']))
     if req["assignment"] not in assignments:
         return { 'error': 'No such assignment' }
 
@@ -30,7 +34,7 @@ def handle(req, syscall):
         return { 'error': 'This assignment requires a group size of %d, given %d.' % (group_size, len(users)) }
 
     for user in users:
-        repo = syscall.read_key(bytes('cos316/assignments/%s/%s' % (req["assignment"], user), 'utf-8'));
+        repo = syscall.fs_read([l_class, req["assignment"], user])
         if repo:
             return {
                 'error': ("%s is already completing %s at %s" % (user, req['assignment'], repo.decode('utf-8')))
@@ -40,37 +44,47 @@ def handle(req, syscall):
     name = None
     for i in range(0, 3):
         name = '-'.join([req["assignment"], random.choice(adjectives), random.choice(nouns)])
-        api_route = "/repos/%s/generate" % (assignments[req["assignment"]]["starter_code"])
+        api_route = "/repos/%s/%s/generate" % (org, assignments[req["assignment"]]["starter_code"])
         body = {
-                'owner': 'cos316',
+                'owner': org,
                 'name': name,
                 'private': True
         }
-        resp = syscall.github_rest_post(api_route, body);
+        resp = syscall.github_rest_post(api_route, body, token);
         if resp.status == 201:
                 break
         elif i == 2:
             return { 'error': "Can't find a unique repository name", "status": resp.status }
 
     for user in req['gh_handles']:
-        api_route = "/repos/cos316/%s/collaborators/%s" % (name, user)
+        api_route = "/repos/%s/%s/collaborators/%s" % (org, name, user)
         body = {
             'permission': 'push'
         }
-        resp = syscall.github_rest_put(api_route, body);
+        resp = syscall.github_rest_put(api_route, body, token);
         if resp.status > 204:
             return { 'error': "Couldn't add user to repository", "status": resp.status }
 
-
-    syscall.write_key(bytes('github/cos316/%s/_meta' % name, 'utf-8'),
+    orig_label = syscall.get_current_label()
+    syscall.declassify_to(syscall.public_dclabel().secrecy)
+    l_repo = syscall.new_dclabel([['-'.join([org, name])]], [[org]])
+    meta_path = [l_repo, '_meta']
+    workflow_path = [l_repo, '_workflow']
+    syscall.fs_createfile(meta_path)
+    syscall.fs_createfile(workflow_path)
+    syscall.fs_write(meta_path,
                       bytes(json.dumps({
                           'assignment': req['assignment'],
                           'users': list(users),
                       }), 'utf-8'))
-    syscall.write_key(bytes('github/cos316/%s/_workflow' % name, 'utf-8'),
+    syscall.fs_write(workflow_path,
                       bytes(json.dumps(["go_grader", "grades", "generate_report", "post_comment"]), 'utf-8'))
+    syscall.taint(orig_label)
+
     for user in users:
-        syscall.write_key(bytes('cos316/assignments/%s/%s' % (req["assignment"], user), 'utf-8'),
-                          bytes("cos316/%s" % name, 'utf-8'))
+        syscall.fs_createdir([l_class, req['assignment']])
+        syscall.fs_createfile([l_class, req['assignment'], user])
+        syscall.fs_write([l_class, req['assignment'], user],
+                          bytes("%s/%s" % (org, name), 'utf-8'))
 
     return { 'name': name, 'users': list(users), 'github_handles': req['gh_handles'] }

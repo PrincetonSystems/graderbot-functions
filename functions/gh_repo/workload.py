@@ -4,32 +4,37 @@ import os
 import time
 
 def handle(req, syscall):
-    key = "github/%s/%s.tgz" % (req["repository"]["full_name"], req["after"])
-    meta_key = "github/%s/_meta" % (req["repository"]["full_name"])
-    workflow_key = "github/%s/_workflow" % (req["repository"]["full_name"])
+    owner, repo = req["repository"]["full_name"].split('/')
+    full_repo_name = '-'.join([owner, repo])
+    l_repo = syscall.new_dclabel([[full_repo_name]], [[owner]])
+    metadata = json.loads(syscall.fs_read([l_repo, '_meta']) or "{}")
+    workflow = json.loads(syscall.fs_read([l_repo, '_workflow']) or "[]")
 
-    metadataString = syscall.read_key(bytes(meta_key, "utf-8")) or "{}"
-    if metadataString:
-        metadata = json.loads(metadataString)
-        workflow = json.loads(syscall.read_key(bytes(workflow_key, "utf-8")) or "[]")
+    l_w = syscall.getCurrentLabel()
+    l_w.integrity = [['gh_repo']]
 
-        resp = syscall.github_rest_get("/repos/%s/tarball/%s" % (req["repository"]["full_name"], req["after"]));
-        syscall.write_key(bytes(key, "utf-8"), resp.data)
+    resp = syscall.github_rest_get("/repos/%s/tarball/%s" % (req_full_name, req["after"]))
 
-        if len(workflow) > 0:
-            next_function = workflow.pop(0)
-            syscall.invoke(next_function, json.dumps({
-                "args": {
-                    "submission": key
-                },
-                "workflow": workflow,
-                "context": {
-                    "repository": req["repository"]["full_name"],
-                    "commit": req["after"],
-                    "push_date": req["repository"]["pushed_at"],
-                    "metadata": metadata
-                }
-            }))
-        return { "written": len(resp.data), "key": key }
-    else:
-        return {}
+    tarball_path = [l_w, req['after']+'.tgz']
+    success = syscall.fs_createfile(tarball_path)
+    success &= syscall.fs_write(tarball_path, resp.data)
+    if not success:
+        return { "error": "failed to download tarball" }
+
+    if len(workflow) > 0:
+        next_function = workflow.pop(0)
+        payload = json.dumps({
+            "args": {
+                "submission": tarball_path
+            },
+            "workflow": workflow,
+            "context": {
+                "repository": req["repository"]["full_name"],
+                "commit": req["after"],
+                "push_date": req["repository"]["pushed_at"],
+                "metadata": metadata
+            }
+        })
+        data_handles = {}
+        syscall.invoke(next_function, payload, data_handles)
+    return { "written": len(resp.data), "path": tarball_path }
