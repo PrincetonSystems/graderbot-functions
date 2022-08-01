@@ -1,8 +1,10 @@
+import sys
 import syscalls_pb2
 import json
 import os
 import subprocess
 import shutil
+import tempfile
 
 def handle(req, syscall):
     args = req["args"]
@@ -19,6 +21,8 @@ def handle(req, syscall):
     return result
 
 def app_handle(args, state, syscall):
+    os.system("sh /usr/bin/setup-eth0.sh")
+    os.system("mount -o remount,size=1G /tmp")
     class NewBlob(object):
         def __new__(cls, size=None):
             req = syscalls_pb2.Syscall(createBlob = syscalls_pb2.BlobCreate(size=size))
@@ -77,7 +81,7 @@ def app_handle(args, state, syscall):
     os.putenv("PATH", ":".join([path, "/srv/bin"]))
 
     cmd = """
-    truncate -s 500M {img}
+    truncate -s 2G {img}
     mkfs.ext4 -F {img}
     mkdir -p {mnt}
     mount {img} {mnt}
@@ -85,25 +89,37 @@ def app_handle(args, state, syscall):
 
     os.system(cmd.format(img="/tmp/image.ext4", mnt="/tmp/mnt"))
 
-    tarh = Blob(args["submission"])
-    p = subprocess.Popen(["tar", "-xz", "--strip-components=1", "-C", "/tmp/mnt"], stdin=subprocess.PIPE)
-    while True:
-        data = tarh.read()
-        if len(data) > 0:
-            p.stdin.write(data)
+    with tempfile.TemporaryDirectory() as build_dir:
+        tarh = Blob(args["submission"])
+        p = subprocess.Popen(["tar", "-xz", "--strip-components=1", "-C", build_dir], stdin=subprocess.PIPE)
+        while True:
+            data = tarh.read()
+            if len(data) > 0:
+                p.stdin.write(data)
+            else:
+                p.stdin.close()
+                break
+
+        p.wait()
+
+        if os.path.exists(os.path.join(build_dir, "Makefile")):
+            cmd = """
+            make -C {build_dir}
+            mv {build_dir}/out/* {mnt}/
+            """
+            os.system(cmd.format(img="/tmp/image.ext4", mnt="/tmp/mnt", build_dir=build_dir))
         else:
-            p.stdin.close()
-            break
+            cmd = """
+            mv {build_dir}/* {mnt}/
+            """
+            os.system(cmd.format(img="/tmp/image.ext4", mnt="/tmp/mnt", build_dir=build_dir))
 
-    p.wait()
-
-
-    cmd = """
-    umount {mnt}
-    e2fsck -f {img}
-    resize2fs -M {img}
-    """
-    os.system(cmd.format(img="/tmp/image.ext4", mnt="/tmp/mnt"))
+        cmd = """
+        umount {mnt}
+        e2fsck -y -f {img}
+        resize2fs -M {img}
+        """
+        os.system(cmd.format(img="/tmp/image.ext4", mnt="/tmp/mnt", build_dir=build_dir))
     output = NewBlob()
     with open("/tmp/image.ext4", mode="rb") as f:
         while True:
