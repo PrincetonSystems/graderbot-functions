@@ -59,7 +59,7 @@ def app_handle(args, state, syscall):
 
         with syscall.open_unnamed(grading_script) as grading_script_tar_file:
             os.mkdir("grader")
-            tarp = subprocess.Popen("tar -C submission -xz", shell=True, stdin=subprocess.PIPE)
+            tarp = subprocess.Popen("tar -C grader -xz", shell=True, stdin=subprocess.PIPE)
             bs = grading_script_tar_file.read()
             while len(bs) > 0:
                 tarp.stdin.write(bs)
