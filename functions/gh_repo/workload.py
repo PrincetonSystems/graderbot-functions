@@ -3,7 +3,7 @@ import tempfile
 import os
 import time
 
-def handle(req, syscall):
+def push(req, syscall):
     key = "github/%s/%s.tgz" % (req["repository"]["full_name"], req["after"])
     branch_key = "github/%s/%s.tgz" % (req["repository"]["full_name"], req["ref"])
     meta_key = "github/%s/_meta" % (req["repository"]["full_name"])
@@ -37,3 +37,13 @@ def handle(req, syscall):
         return { "written": len(resp.data), "key": key }
     else:
         return {}
+
+handlers = { "push": push }
+
+def handle(req, syscall):
+    handler = handlers.get(req.get("event"))
+    if handler:
+        return handler(req, syscall)
+    else:
+        return {}
+
