@@ -82,7 +82,7 @@ def app_handle(args, state, syscall):
     # that includes a "grading_script" key for each assignment
     assignments_def = json.loads(syscall.read_key(bytes(f'{state["repository"].split("/")[0]}/assignments', 'utf-8')).decode('utf8'))
     assignment_grading_script_ref = assignments_def[assignment]["grading_script"]
-    grading_script = syscall.read_key(bytes(assignment_grading_script_ref, 'utf-8'))
+    grading_script = syscall.read_key(bytes(assignment_grading_script_ref, 'utf-8')).strip()
 
     with tempfile.TemporaryDirectory() as workdir:
         shutil.copy("/srv/utils326.ml", workdir)
