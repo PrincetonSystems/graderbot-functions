@@ -19,7 +19,9 @@ def commit_comment(req, syscall):
                 "user": req["comment"]["user"]["login"]
             }
         }))
-    return { "read": len(req["comment"]["body"]) }
+        return { "read": len(req["comment"]["body"]) }
+    else:
+        return {}
 
 def push(req, syscall):
     key = "github/%s/%s.tgz" % (req["repository"]["full_name"], req["after"])
