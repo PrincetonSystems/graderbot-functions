@@ -50,7 +50,8 @@ def do_run(report_key, results_key, limit, syscall):
     `results_key`.
     """
     # note that preexec_fn makes Popen thread-unsafe
-    run = Popen("ocamlrun a.out", shell=True, preexec_fn=set_cpu_limits(limit)).communicate()
+    run = Popen("ocamlrun a.out", shell=True, preexec_fn=set_cpu_limits(limit))
+    run.communicate()
 
     report = Popen("cat /tmp/report*", shell=True, stdout=PIPE).communicate()[0]
     if run.returncode == -signal.SIGKILL:

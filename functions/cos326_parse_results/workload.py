@@ -77,9 +77,11 @@ def app_handle(args, context, syscall):
     report_key = key + "/final_report"
     initial_report = syscall.read_key(bytes(args["report"], "utf-8"))
 
-    if "results" not in args:
-        syscall.write_key(bytes(report_key, "utf-8"), initial_report)
-    else:
+    final_report = []
+    timestamp = datetime.utcfromtimestamp(context["push_date"]).replace(tzinfo=timezone.utc).astimezone(tz=None).strftime("%D %T %z")
+    final_report.append(bytes(f"Submitted {timestamp}\n", "utf-8"))
+
+    if "results" in args:
         results = syscall.read_key(bytes(args["results"], "utf-8")).decode("utf-8")
 
         stats, opt_stats = parse_results(results)
@@ -98,18 +100,16 @@ def app_handle(args, context, syscall):
                 summary.append(f"    - Pending: _ / {opt_stats['pending']}")
         summary.append("\n")
 
-        final_report = []
-        timestamp = datetime.utcfromtimestamp(context["push_date"]).replace(tzinfo=timezone.utc).astimezone(tz=None).strftime("%D %T %z")
-        final_report.append(bytes(f"Submitted {timestamp}\n", "utf-8"))
-        final_report.extend([bytes(line, "utf-8") for line in summary])
-        final_report.append(initial_report)
-        syscall.write_key(bytes(report_key, "utf-8"), b"\n".join(final_report))
-
         syscall.write_key(bytes(key + "/grade.json", "utf-8"), bytes(json.dumps({
             "grade": stats["points"] / stats["total_points"],
             "given": stats["points"],
             "total": stats["total_points"],
             "push_date": context["push_date"]
         }), "utf-8"))
+
+        final_report.extend([bytes(line, "utf-8") for line in summary])
+
+    final_report.append(initial_report)
+    syscall.write_key(bytes(report_key, "utf-8"), b"\n".join(final_report))
 
     return { "report": report_key }
