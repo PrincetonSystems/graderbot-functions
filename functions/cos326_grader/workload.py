@@ -64,7 +64,7 @@ def do_run(report_key, results_key, limit, syscall):
     syscall.write_key(bytes(results_key, "utf-8"), results)
 
     # clean up temporary files
-    os.system("rm -f /tmp/report* /tmp/results*")
+    os.system("rm -f a.out /tmp/report* /tmp/results*")
 
 def app_handle(args, context, syscall):
     org_name = context["repository"].split("/")[0]
