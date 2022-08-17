@@ -28,6 +28,12 @@ functions:
     runtimefs: "python3.ext4"
     appfs: "cos326_grader.img"
     concurrency_limit: 100
+  cos326_parse_results:
+    vcpus: 1
+    memory: 128
+    runtimefs: "python3.ext4"
+    appfs: "cos326_parse_results.img"
+    concurrency_limit: 100
   grades:
     vcpus: 1
     memory: 128
@@ -46,4 +52,3 @@ functions:
     runtimefs: "python3.ext4"
     appfs: "post_comment.img"
     concurrency_limit: 100
-

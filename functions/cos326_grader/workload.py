@@ -3,7 +3,7 @@ import os
 import resource
 import shutil
 import signal
-import subprocess
+from subprocess import Popen, PIPE, STDOUT
 import tempfile
 
 def handle(req, syscall):
@@ -21,68 +21,60 @@ def handle(req, syscall):
     return result
 
 def set_cpu_limits(lim):
-    """Used to limit the amount of CPU time a process can consume to lim seconds.
-    The same limits are applied to processes it creates.
+    """Used to limit the amount of CPU time a process can consume to `lim` seconds.
+    The same limits are applied to all descendants of that process.
     """
     resource.setrlimit(resource.RLIMIT_CPU, (lim, lim))
 
 def build(report_key, syscall):
-    """ Compiles grading executable.
-    If code compiles succuessfully, returns 0 and nothing is written to the database.
-    Otherwise returns the error code from compiling and writes an appropriate
-    report to the database key `report_key`.
+    """Compiles grading executable and times out if 30 seconds in CPU time is reached.
+    If compiling fails, writes a report to the database key `report_key`.
+    Returns the exit code from compiling.
     """
     # note that preexec_fn makes Popen thread-unsafe
-    compilerun = subprocess.Popen("make -sef submission/Makefile", shell=True,
-                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                    preexec_fn=set_cpu_limits(60))
-    compileout = compilerun.communicate()[0]
-    if compilerun.returncode != 0:
-        if compilerun.returncode == -signal.SIGKILL:
-            syscall.write_key(bytes(report_key, "utf-8"), b"> Compile time limit reached.")
+    run = Popen("make -sef submission/Makefile", shell=True, stdout=PIPE,
+            stderr=STDOUT, preexec_fn=set_cpu_limits(30))
+    out = run.communicate()[0]
+
+    if run.returncode != 0:
+        if run.returncode == -signal.SIGKILL:
+            syscall.write_key(bytes(report_key, "utf-8"), b"> Timed out while compiling your code.")
         else:
-            syscall.write_key(bytes(report_key, "utf-8"), b"\n".join([b"```", compileout, b"```"]))
-        return -1
-    return 0
+            syscall.write_key(bytes(report_key, "utf-8"), b"\n".join([b"```", out, b"```"]))
+    return run.returncode
 
-def run(report_key, limit, syscall):
-    """ Runs grading executable.
-    If code compiles succuessfully, returns 0 and nothing is written to the database.
-    Otherwise returns the error code from compiling and writes an appropriate
-    report to the database key `report_key`.
+def run(report_key, results_key, limit, syscall):
+    """Runs grading executable and times out if `limit` seconds in CPU time is reached.
+    Writes grading executable output to the database key `report_key`.
+    Writes grading executable intermediate progress output to the database key
+    `results_key`.
     """
     # note that preexec_fn makes Popen thread-unsafe
-    testrun = subprocess.Popen("ocamlrun a.out", shell=True, stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT, preexec_fn=set_cpu_limits(limit))
-    testout = testrun.communicate()[0]
-    if testrun.returncode == -signal.SIGKILL:
-        syscall.write_key(bytes(report_key, "utf-8"), b"> Run time limit reached.")
-    else:
-        syscall.write_key(bytes(report_key, "utf-8"), testout)
+    run = Popen("ocamlrun a.out", shell=True, preexec_fn=set_cpu_limits(limit)).communicate()
 
-def app_handle(args, state, syscall):
-    """Compiles and runs an assignment-specific grading script for an assignment submission
+    report = Popen("cat /tmp/report*", shell=True, stdout=PIPE).communicate()[0]
+    if run.returncode == -signal.SIGKILL:
+        report = b"\n".join(report, b"\n> Your program was forcefully killed."
+                                    b" The most likely reason for this is your"
+                                    b" code taking too long to run.")
+    syscall.write_key(bytes(report_key, "utf-8"), report)
 
-    Parameters
-    ----------
-    args : dict
-        A dictionary containing a reference to a gzipped tarball of the submission
-        under the "submission" key
-    state : dict
-        A dictionary containing the assignment name (e.g. "a1", "a2", etc) under
-        state["metadata"]["assignment"]. This is most likely set in the `_meta`
-        repository prefix. This *must* correspond to a key in the 'cos326-f22/assignments'
-        key containing a grading_script pointing to the grading script gzipped tarball.
-    syscall : Syscall object
-    """
-    course_name = f'{state["repository"].split("/")[0]}'
-    assignment = state["metadata"]["assignment"]
-    report_key = f"github/{state['repository']}/{state['commit']}/report"
-    # Assignment definitions are under {github org}/assignments as a JSON string
-    # that includes a "grading_script" key for each assignment
-    assignments_def = json.loads(syscall.read_key(bytes(f'{state["repository"].split("/")[0]}/assignments', 'utf-8')).decode('utf8'))
-    assignment_grading_script_ref = assignments_def[assignment]["grading_script"]
-    grading_script = syscall.read_key(bytes(assignment_grading_script_ref, 'utf-8')).strip()
+    results = Popen("cat /tmp/results*", shell=True, stdout=PIPE).communicate()[0]
+    syscall.write_key(bytes(results_key, "utf-8"), results)
+
+def app_handle(args, context, syscall):
+    org_name = context["repository"].split("/")[0]
+
+    key = f"github/{context['repository']}/{context['commit']}"
+    report_key = key + "/report"
+    results_key = key + "/results"
+
+    assignment = context["metadata"]["assignment"]
+    assignments = json.loads(syscall.read_key(bytes(f"{org_name}/assignments", "utf-8")))
+    grading_script_ref = assignments[assignment]["grading_script"]
+    grading_script = syscall.read_key(bytes(grading_script_ref, "utf-8")).strip()
+
+    limits = json.loads(syscall.read_key(bytes(f"{org_name}/limits", "utf-8")))
 
     with tempfile.TemporaryDirectory() as workdir:
         shutil.copy("/srv/utils326.ml", workdir)
@@ -91,48 +83,41 @@ def app_handle(args, state, syscall):
 
         with syscall.open_unnamed(args["submission"]) as submission_tar_file:
             os.mkdir("submission")
-            tarp = subprocess.Popen("tar -C submission -xz --strip-components=1", shell=True, stdin=subprocess.PIPE)
+            tarp = Popen("tar -C submission -xz --strip-components=1", shell=True, stdin=PIPE)
             bs = submission_tar_file.read()
             while len(bs) > 0:
                 tarp.stdin.write(bs)
                 bs = submission_tar_file.read()
             tarp.stdin.close()
             tarp.communicate()
-            os.system("ls submission")
 
         with syscall.open_unnamed(grading_script) as grading_script_tar_file:
             os.mkdir("grader")
-            tarp = subprocess.Popen("tar -C grader -xz", shell=True, stdin=subprocess.PIPE)
+            tarp = Popen("tar -C grader -xz", shell=True, stdin=PIPE)
             bs = grading_script_tar_file.read()
             while len(bs) > 0:
                 tarp.stdin.write(bs)
                 bs = grading_script_tar_file.read()
             tarp.stdin.close()
             tarp.communicate()
-            os.system("ls grader")
 
-        # set up environment variables
-        os.putenv("OCAMLLIB", "/srv/usr/lib/ocaml")
         os.putenv("PATH", f"/srv/usr/bin:{os.getenv('PATH')}")
+        os.putenv("OCAMLLIB", "/srv/usr/lib/ocaml")
         os.putenv("GRADER", "grader")
         os.putenv("SUBMISSION_DIR", "submission")
 
-        # ensure preliminary checks pass
-        checkrun = subprocess.Popen("./precheck", shell=True, stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT)
-        checkout = checkrun.communicate()[0]
-        if checkrun.returncode != 0:
-            syscall.write_key(bytes(report_key, "utf-8"), checkout)
+        run = Popen("./precheck", stdout=PIPE, stderr=STDOUT)
+        out = run.communicate()[0]
+        if run.returncode != 0:
+            syscall.write_key(bytes(report_key, "utf-8"), out)
             return { "report": report_key }
 
-        os.system("cp grader/* submission")
+        os.system("cp -r grader/* submission")
         if build(report_key, syscall) != 0:
             return { "report": report_key }
 
         # prevent students from accessing source code files
         os.system("rm -rf utils326* precheck grader submission")
 
-        limits = json.loads(syscall.read_key(bytes(f"{course_name}/limits", "utf-8")).decode("utf-8"))
-        limit = limits[assignment]
-        run(report_key, limit, syscall)
-        return { "report": report_key }
+        run(report_key, results_key, limits[assignment], syscall)
+        return { "report": report_key, "results": results_key }

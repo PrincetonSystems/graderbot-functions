@@ -1,8 +1,6 @@
 SOURCES=workload.py utils326.ml precheck
 
 OCAML_APK=ocaml-4.14.0-r0.apk
-OCAMLBUILD_APK=ocamlbuild-0.14.1-r1.apk
-OCAMLFIND_APK=ocaml-findlib-1.9.3-r0.apk
 OCAMLRUNTIME_APK=ocaml-runtime-4.14.0-r0.apk
 OCAMLNUM_APK=ocaml-num-1.4-r1.apk
 
