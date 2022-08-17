@@ -43,7 +43,7 @@ def build(report_key, syscall):
             syscall.write_key(bytes(report_key, "utf-8"), b"\n".join([b"```", out, b"```"]))
     return run.returncode
 
-def run(report_key, results_key, limit, syscall):
+def do_run(report_key, results_key, limit, syscall):
     """Runs grading executable and times out if `limit` seconds in CPU time is reached.
     Writes grading executable output to the database key `report_key`.
     Writes grading executable intermediate progress output to the database key
@@ -119,5 +119,5 @@ def app_handle(args, context, syscall):
         # prevent students from accessing source code files
         os.system("rm -rf utils326* precheck grader submission")
 
-        run(report_key, results_key, limits[assignment], syscall)
+        do_run(report_key, results_key, limits[assignment], syscall)
         return { "report": report_key, "results": results_key }
