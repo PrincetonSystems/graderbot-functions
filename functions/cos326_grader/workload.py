@@ -107,8 +107,8 @@ def app_handle(args, context, syscall):
 
         os.putenv("PATH", f"/srv/usr/bin:{os.getenv('PATH')}")
         os.putenv("OCAMLLIB", "/srv/usr/lib/ocaml")
-        os.putenv("SHARED", "shared")
-        os.putenv("GRADER", "grader")
+        os.putenv("SHARED", f"{os.path.abspath('shared')}")
+        os.putenv("GRADER", f"{os.path.abspath('grader')}")
         os.chdir("submission")
 
         run = Popen("../shared/precheck", stdout=PIPE)
