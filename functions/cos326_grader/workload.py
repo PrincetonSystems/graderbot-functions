@@ -32,8 +32,8 @@ def build(report_key, syscall):
     Returns the exit code from compiling.
     """
     # note that preexec_fn makes Popen thread-unsafe
-    run = Popen("make -sef submission/Makefile", shell=True, stdout=PIPE,
-            stderr=STDOUT, preexec_fn=set_cpu_limits(30))
+    run = Popen("make -se", shell=True, stdout=PIPE, stderr=STDOUT,
+            preexec_fn=set_cpu_limits(30))
     out = run.communicate()[0]
 
     if run.returncode != 0:
@@ -64,7 +64,7 @@ def do_run(report_key, results_key, limit, syscall):
     syscall.write_key(bytes(results_key, "utf-8"), results)
 
     # clean up temporary files
-    os.system("rm -f a.out /tmp/report* /tmp/results*")
+    os.system("rm -f /tmp/report* /tmp/results*")
 
 def app_handle(args, context, syscall):
     org_name = context["repository"].split("/")[0]
@@ -81,9 +81,8 @@ def app_handle(args, context, syscall):
     limits = json.loads(syscall.read_key(bytes(f"{org_name}/limits", "utf-8")))
 
     with tempfile.TemporaryDirectory() as workdir:
-        shutil.copy("/srv/utils326.ml", workdir)
-        shutil.copy("/srv/precheck", workdir)
-        os.chdir(workdir)
+        os.mkdir("shared")
+        os.system(f"cp /srv/utils326.ml /srv/precheck {workdir}")
 
         with syscall.open_unnamed(args["submission"]) as submission_tar_file:
             os.mkdir("submission")
@@ -107,21 +106,24 @@ def app_handle(args, context, syscall):
 
         os.putenv("PATH", f"/srv/usr/bin:{os.getenv('PATH')}")
         os.putenv("OCAMLLIB", "/srv/usr/lib/ocaml")
+        os.putenv("SHARED", "shared")
         os.putenv("GRADER", "grader")
-        os.putenv("SUBMISSION_DIR", "submission")
+        os.chdir("submission")
 
-        run = Popen("./precheck", stdout=PIPE, stderr=STDOUT)
+        run = Popen("./shared/precheck", stdout=PIPE)
         out = run.communicate()[0]
         if run.returncode != 0:
             syscall.write_key(bytes(report_key, "utf-8"), out)
             return { "report": report_key }
 
-        os.system("cp -r grader/* submission")
+        os.system("cp -r grader/* .")
         if build(report_key, syscall) != 0:
             return { "report": report_key }
 
         # prevent students from accessing source code files
-        os.system("rm -rf utils326* precheck grader submission")
+        shutil.copy("a.out", workdir)
+        os.chdir(workdir)
+        os.system("rm -rf shared grader submission")
 
         do_run(report_key, results_key, limits[assignment], syscall)
         return { "report": report_key, "results": results_key }
