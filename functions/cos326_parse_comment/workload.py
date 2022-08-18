@@ -29,7 +29,7 @@ def app_handle(args, context, syscall):
         return {}
 
     extra = {}
-    pattern = re.compile(r"grade (\w+ )?(\d+)( */ *(\d+))?", re.IGNORECASE)
+    pattern = re.compile(r"[ \t]*grade +(\w+ +)?(\d+)( */ *(\d+))?", re.IGNORECASE)
     for line in args["comment"].splitlines():
         reg = pattern.match(line)
         if reg:
@@ -38,9 +38,9 @@ def app_handle(args, context, syscall):
                 grade["total"] = int(reg.group(4))
 
             if reg.group(1):
-                extra[reg.group(1).strip()] = grade
+                extra[reg.group(1).strip().lower()] = grade
             else:
-                extra["manual"] = grade
+                extra = extra | grade
         else:
             break
 
