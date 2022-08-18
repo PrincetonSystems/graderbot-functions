@@ -29,9 +29,10 @@ def app_handle(args, context, syscall):
         return {}
 
     extra = {}
-    pattern = re.compile(r"[ \t]*grade +(\w+ +)?(\d+)( */ *(\d+))?", re.IGNORECASE)
+    p1 = re.compile(r"[ \t]*grade +(\w+ +)?([+-]?\d+)( */ *(\d+))?", re.IGNORECASE)
+    p2 = re.compile(r"[ \t]*special +note: +(.+)", re.IGNORECASE)
     for line in args["comment"].splitlines():
-        reg = pattern.match(line)
+        reg = p1.match(line)
         if reg:
             grade = { "earned": int(reg.group(2)) }
             if reg.group(4):
@@ -42,7 +43,11 @@ def app_handle(args, context, syscall):
             else:
                 extra = extra | grade
         else:
-            break
+            reg = p2.match(line)
+            if reg:
+                extra["special note"] = reg.group(1)
+            else:
+                break
 
     syscall.write_key(bytes(key, "utf-8"), bytes(json.dumps(extra), "utf-8"))
     return { "remarks": key }
