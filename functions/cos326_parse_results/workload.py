@@ -87,25 +87,28 @@ def app_handle(args, context, syscall):
         stats, opt_stats = parse_results(results)
 
         summary = []
-        summary.append(f"## Grade: {100*stats['points']/stats['total_points']:.2f}%\n")
-        summary.append(f"- Problems passed: {stats['passed']} / {stats['probs']}")
-        summary.append("- Points awarded:")
-        summary.append(f"    - Given: {stats['points']} / {stats['total_points']}")
-        if stats["pending"] != 0:
-            summary.append(f"    - Pending: _ / {stats['pending']}")
-        if opt_stats["probs"] != 0:
-            summary.append(f"- Optional problems passed: {opt_stats['passed']} / {opt_stats['probs']}")
-            summary.append(f"    - Given: {opt_stats['points']} / {opt_stats['total_points']}")
-            if opt_stats["pending"] != 0:
-                summary.append(f"    - Pending: _ / {opt_stats['pending']}")
-        summary.append("\n")
+        if stats["total_points"] != 0:
+            summary.append(f"## Grade: {100*stats['points']/stats['total_points']:.2f}%\n")
+            summary.append(f"- Problems passed: {stats['passed']} / {stats['probs']}")
+            summary.append("- Points awarded:")
+            summary.append(f"    - Given: {stats['points']} / {stats['total_points']}")
+            if stats["pending"] != 0:
+                summary.append(f"    - Pending: _ / {stats['pending']}")
+            if opt_stats["probs"] != 0:
+                summary.append(f"- Optional problems passed: {opt_stats['passed']} / {opt_stats['probs']}")
+                summary.append(f"    - Given: {opt_stats['points']} / {opt_stats['total_points']}")
+                if opt_stats["pending"] != 0:
+                    summary.append(f"    - Pending: _ / {opt_stats['pending']}")
+            summary.append("\n")
 
-        syscall.write_key(bytes(key + "/grade.json", "utf-8"), bytes(json.dumps({
-            "grade": stats["points"] / stats["total_points"],
-            "given": stats["points"],
-            "total": stats["total_points"],
-            "push_date": context["push_date"]
-        }), "utf-8"))
+            syscall.write_key(bytes(key + "/grade.json", "utf-8"), bytes(json.dumps({
+                "grade": stats["points"] / stats["total_points"],
+                "given": stats["points"],
+                "total": stats["total_points"],
+                "push_date": context["push_date"]
+            }), "utf-8"))
+        else:
+            summary.append("## Grade: 0.00%\n")
 
         final_report.extend([bytes(line, "utf-8") for line in summary])
 

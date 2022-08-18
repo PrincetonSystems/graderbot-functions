@@ -55,9 +55,9 @@ def do_run(report_key, results_key, limit, syscall):
 
     report = Popen("cat /tmp/report*", shell=True, stdout=PIPE).communicate()[0]
     if run.returncode == -signal.SIGKILL:
-        report = b"\n".join(report, b"\n> Your program was forcefully killed."
-                                    b" The most likely reason for this is your"
-                                    b" code taking too long to run.")
+        report = b"\n".join([report, b"\n> Your program was forcefully killed."
+                                     b" The most likely reason for this is your"
+                                     b" code taking too long to run."])
     syscall.write_key(bytes(report_key, "utf-8"), report)
 
     results = Popen("cat /tmp/results*", shell=True, stdout=PIPE).communicate()[0]
