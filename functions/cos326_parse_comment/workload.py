@@ -24,30 +24,38 @@ def app_handle(args, context, syscall):
     org_name = context["repository"].split("/")[0]
     enrollment = json.loads(syscall.read_key(bytes(f"{org_name}/enrollments.json", "utf-8")))
 
-    match = enrollment.get(user_email)
-    if not match or match["type"] != "Staff":
+    user = enrollment.get(user_email)
+    if not user or user["type"] != "Staff":
         return {}
 
-    extra = {}
-    p1 = re.compile(r"[ \t]*grade +(\w+ +)?([+-]?\d+)( */ *(\d+))?", re.IGNORECASE)
-    p2 = re.compile(r"[ \t]*special +note: +(.+)", re.IGNORECASE)
-    for line in args["comment"].splitlines():
-        reg = p1.match(line)
-        if reg:
-            grade = { "earned": int(reg.group(2)) }
-            if reg.group(4):
-                grade["total"] = int(reg.group(4))
+    extra = json.loads(syscall.read_key(bytes(key, "utf-8")) or "{}")
+    p1 = re.compile(r" *grade +(\w+ +)?([+-]?\d+)( */ *(\d+))?", re.IGNORECASE)
+    p2 = re.compile(r" *special +note: +(.+)", re.IGNORECASE)
+    for num, line in enumerate(args["comment"].splitlines()):
+        if line == "": # end of header indicator
+            break
+        match = p1.match(line)
+        if match:
+            grade = { "earned": int(match.group(2)) }
+            if match.group(4):
+                grade["total"] = int(match.group(4))
 
-            if reg.group(1):
-                extra[reg.group(1).strip().lower()] = grade
+            if match.group(1):
+                extra[match.group(1).strip().lower()] = grade
             else:
                 extra = extra | grade
         else:
-            reg = p2.match(line)
-            if reg:
-                extra["special note"] = reg.group(1)
-            else:
-                break
+            match = p2.match(line)
+            if match:
+                extra["special note"] = match.group(1)
+            else: # could not match header line to any pattern
+                api_route = f"/repos/{context['repository']}/commits/{context['commit']}/comments"
+                body = {
+                    "body": f"Unable to parse comment line number {num}.\n"
+                            f"@{github_user}, make sure the line is formatted correctly."
+                }
+                syscall.github_rest_post(api_route, body);
+                return {}
 
     syscall.write_key(bytes(key, "utf-8"), bytes(json.dumps(extra), "utf-8"))
     return { "remarks": key }
