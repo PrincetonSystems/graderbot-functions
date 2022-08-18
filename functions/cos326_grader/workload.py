@@ -81,8 +81,9 @@ def app_handle(args, context, syscall):
     limits = json.loads(syscall.read_key(bytes(f"{org_name}/limits", "utf-8")))
 
     with tempfile.TemporaryDirectory() as workdir:
+        os.chdir(workdir)
         os.mkdir("shared")
-        os.system(f"cp /srv/utils326.ml /srv/precheck {workdir}")
+        os.system("cp /srv/utils326.ml /srv/precheck shared")
 
         with syscall.open_unnamed(args["submission"]) as submission_tar_file:
             os.mkdir("submission")
@@ -110,7 +111,7 @@ def app_handle(args, context, syscall):
         os.putenv("GRADER", "grader")
         os.chdir("submission")
 
-        run = Popen("./shared/precheck", stdout=PIPE)
+        run = Popen("../shared/precheck", stdout=PIPE)
         out = run.communicate()[0]
         if run.returncode != 0:
             syscall.write_key(bytes(report_key, "utf-8"), out)
