@@ -117,7 +117,7 @@ def app_handle(args, context, syscall):
             syscall.write_key(bytes(report_key, "utf-8"), out)
             return { "report": report_key }
 
-        os.system("cp -r grader/* .")
+        os.system("cp -r ../grader/* .")
         if build(report_key, syscall) != 0:
             return { "report": report_key }
 
