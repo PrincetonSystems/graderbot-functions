@@ -111,13 +111,13 @@ def app_handle(args, context, syscall):
         os.putenv("GRADER", f"{os.path.abspath('grader')}")
         os.chdir("submission")
 
-        run = Popen("../shared/precheck", stdout=PIPE)
+        run = Popen(f"{os.getenv('SHARED')}/precheck", stdout=PIPE)
         out = run.communicate()[0]
         if run.returncode != 0:
             syscall.write_key(bytes(report_key, "utf-8"), out)
             return { "report": report_key }
 
-        os.system("cp -r ../grader/* .")
+        os.system(f"cp -r {os.getenv('GRADER')}/* .")
         if build(report_key, syscall) != 0:
             return { "report": report_key }
 
