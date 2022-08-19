@@ -51,7 +51,7 @@ def app_handle(args, context, syscall):
             else: # could not match header line to any pattern
                 api_route = f"/repos/{context['repository']}/commits/{context['commit']}/comments"
                 body = {
-                    "body": f"Unable to parse comment line number {num}.\n"
+                    "body": f"Unable to parse comment line number {num+1}.\n"
                             f"@{github_user}, make sure the line is formatted correctly."
                 }
                 syscall.github_rest_post(api_route, body);

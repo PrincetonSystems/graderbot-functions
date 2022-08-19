@@ -6,7 +6,7 @@ shopt -s nullglob
 exitcode=0
 for f in "$GRADER"/*.mli; do
     base=$(basename "$f")
-    if [ ! -f "$SUBMISSION_DIR/$base" ] || ! cmp -s "$f" "$SUBMISSION_DIR/$base"; then
+    if [ ! -f "$base" ] || ! cmp -s "$f" "$base"; then
         exitcode=1
         echo "> Detected changes to $base! Please restore this file."
     fi
