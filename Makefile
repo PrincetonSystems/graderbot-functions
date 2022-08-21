@@ -25,11 +25,13 @@ output/%_submission.tgz: examples/%_submission/*
 	tar -C examples -czf $@ $*_submission/
 
 .PHONY: prepdb
-prepdb: output/example_cos316_grader.tgz output/example_cos316_submission.tgz output/example_cos326_submission.tgz output/example_cos326_grader.tgz
-	sfdb -b cos316/example/grading_script - < output/example_cos316_grader.tgz
-	sfdb -b github/cos316/example/submission.tgz - < output/example_cos316_submission.tgz
-	sfdb -b cos326-f22/example/grading_script - < output/example_cos326_grader.tgz
-	sfdb -b github/cos326-f22/example/submission.tgz - < output/example_cos326_submission.tgz
+prepdb: output/example_cos316_grader.tgz output/example_cos316_submission.tgz output/example_cos326_grader.tgz output/example_cos326_submission.tgz
+	sfdb cos316/example/grading_script - < output/example_cos316_grader.tgz
+	sfdb github/cos316/example/submission.tgz - < output/example_cos316_submission.tgz
+	sfdb cos326-f22/assignments '{"example": {"grading_script": "cos326-f22/example/grading_script"}}'
+	sfdb cos326-f22/limits '{"example": 1}'
+	sfblob < output/example_cos326_grader.tgz | tr -d '\n' | sfdb cos326-f22/example/grading_script -
+	sfblob < output/example_cos326_submission.tgz | tr -d '\n' | sfdb github/cos326-f22/example/submission.tgz -
 
 run/%: output/%.img payloads/%.jsonl
 	@singlevm --mem_size 1024 --kernel vmlinux-4.20.0 --rootfs python3.ext4 --appfs output/$*.img < payloads/$*.jsonl

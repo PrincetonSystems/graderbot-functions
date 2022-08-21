@@ -1,1 +1,1 @@
-{"args": {"submission": "github/cos326-f22/example/submission.tgz"}, "workflow": [], "context": { "metadata": {"assignment": "example"}}}
+{"args": {"submission": "d32551a89ee4601e0e19cdab47085a50a4d200184c8594203c8093f2f89c767a"}, "workflow": [], "context": {"repository": "cos326-f22/example", "commit": "submission", "metadata": {"assignment": "example"}}}
