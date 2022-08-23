@@ -22,7 +22,7 @@ output/%.tgz: examples/%/*
 	tar -C examples/$* -czf $@ .
 
 output/%_submission.tgz: examples/%_submission/*
-	tar --owner=0 --group=0 -C examples -czf $@ $*_submission/
+	tar -C examples -czf $@ $*_submission/
 
 .PHONY: prepdb
 prepdb: output/example_cos316_grader.tgz output/example_cos316_submission.tgz output/example_cos326_grader.tgz output/example_cos326_submission.tgz
