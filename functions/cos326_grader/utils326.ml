@@ -5,7 +5,7 @@ type points = (int * int)
 
 (* used to store output that is seen by the student *)
 let report_chan : out_channel =
-  try snd (Filename.open_temp_file ~mode:[Open_append] ~temp_dir:"/tmp" "report" "")
+  try snd (Filename.open_temp_file ~mode:[Open_append] ~temp_dir:"/tmp" "cos326_report" "")
   with Sys_error _ -> raise (Sys_error "failed to create file")
 
 (* same as Printf.printf, but outputs to report_chan and always flushes *)
@@ -16,7 +16,7 @@ let printf326 fmt =
 (* used to store output about intermediate progress that is used for grade
  * calculation and collection *)
 let results_chan : out_channel =
-  try snd (Filename.open_temp_file ~mode:[Open_append] ~temp_dir:"/tmp" "results" "")
+  try snd (Filename.open_temp_file ~mode:[Open_append] ~temp_dir:"/tmp" "cos326_results" "")
   with Sys_error _ -> raise (Sys_error "failed to create file")
 
 (* same as Printf.printf, but outputs to results_chan and always flushes *)
