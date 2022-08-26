@@ -28,8 +28,7 @@ output/%_submission.tgz: examples/%_submission/*
 prepdb: output/example_cos316_grader.tgz output/example_cos316_submission.tgz output/example_cos326_grader.tgz output/example_cos326_submission.tgz
 	sfdb cos316/example/grading_script - < output/example_cos316_grader.tgz
 	sfdb github/cos316/example/submission.tgz - < output/example_cos316_submission.tgz
-	sfdb cos326-f22/assignments '{"example": {"grading_script": "cos326-f22/example/grading_script"}}'
-	sfdb cos326-f22/limits '{"example": 1}'
+	sfdb cos326-f22/assignments '{"example": {"grading_script": "cos326-f22/example/grading_script", "runtime_limit": 1}}'
 	sfdb cos326-f22/enrollments.json '{"grader@princeton.edu": {"type": "Staff"}}'
 	sfdb users/github/from/ghost 'grader@princeton.edu'
 	sfblob < output/example_cos326_grader.tgz | tr -d '\n' | sfdb cos326-f22/example/grading_script -

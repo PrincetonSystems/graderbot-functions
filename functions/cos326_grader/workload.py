@@ -77,8 +77,6 @@ def app_handle(args, context, syscall):
     grading_script_ref = assignments[assignment]["grading_script"]
     grading_script = syscall.read_key(bytes(grading_script_ref, "utf-8")).strip()
 
-    limits = json.loads(syscall.read_key(bytes(f"{org_name}/limits", "utf-8")))
-
     with tempfile.TemporaryDirectory() as workdir:
         os.chdir(workdir)
         os.mkdir("shared")
@@ -114,16 +112,16 @@ def app_handle(args, context, syscall):
         out = run.communicate()[0]
         if run.returncode != 0:
             syscall.write_key(bytes(report_key, "utf-8"), out)
-            return { "report": report_key }
+            return { "report": report_key, "results": results_key }
 
         os.system("cp -r ../grader/* .")
         if build(report_key, syscall) != 0:
-            return { "report": report_key }
+            return { "report": report_key, "results": results_key }
 
         # prevent students from accessing source code files
         shutil.copy("a.out", workdir)
         os.chdir(workdir)
         os.system("rm -rf shared grader submission")
 
-        do_run(report_key, results_key, limits[assignment], syscall)
+        do_run(report_key, results_key, assignments[assignment]["runtime_limit"], syscall)
         return { "report": report_key, "results": results_key }
