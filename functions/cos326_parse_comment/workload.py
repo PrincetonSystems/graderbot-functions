@@ -57,7 +57,7 @@ def app_handle(args, context, syscall):
                          f"@{github_user}, make sure the line is formatted correctly.")
             }
             syscall.github_rest_post(api_route, body)
-            return {}
+        return {}
 
     if user["type"] == "Staff":
         syscall.write_key(bytes(key, "utf-8"), bytes(json.dumps(extra), "utf-8"))
