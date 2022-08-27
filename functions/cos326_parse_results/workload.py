@@ -20,11 +20,11 @@ def handle(req, syscall):
 def parse_results(results):
     """Parses `results` to calculate grades.
     Returns two dictionaries, the first of which contains
-        'passed': number of problems passed
-        'points': number of points given
-        'probs': total number of problems
-        'total_points': total number of points
-        'pending': total number of pending points
+        "passed": number of problems passed
+        "points": number of points given
+        "probs": total number of problems
+        "total_points": total number of points that are autograded
+        "pending": total number of pending points
     and the second has the same field names as the first, but which correspond
     to the optional variant.
     """
@@ -79,8 +79,10 @@ def app_handle(args, context, syscall):
     timestamp = datetime.utcfromtimestamp(context["push_date"]).replace(tzinfo=timezone.utc).astimezone(tz=None).strftime("%D %T %z")
     final_report.append(bytes(f"Submitted {timestamp}\n", "utf-8"))
 
-    results = syscall.read_key(bytes(args["results"], "utf-8")).decode("utf-8")
-    stats, opt_stats = parse_results(results)
+    if "results" in args:
+        stats, opt_stats = parse_results(syscall.read_key(bytes(args["results"], "utf-8")).decode("utf-8"))
+    else:
+        stats, opt_stats = parse_results("")
 
     summary = []
     if stats["total_points"] != 0:

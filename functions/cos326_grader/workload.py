@@ -72,8 +72,8 @@ def app_handle(args, context, syscall):
     report_key = key + "/report"
     results_key = key + "/results"
 
-    assignment = context["metadata"]["assignment"]
     assignments = json.loads(syscall.read_key(bytes(f"{org_name}/assignments", "utf-8")))
+    assignment = context["metadata"]["assignment"]
     grading_script_ref = assignments[assignment]["grading_script"]
     grading_script = syscall.read_key(bytes(grading_script_ref, "utf-8")).strip()
 
@@ -112,11 +112,11 @@ def app_handle(args, context, syscall):
         out = run.communicate()[0]
         if run.returncode != 0:
             syscall.write_key(bytes(report_key, "utf-8"), out)
-            return { "report": report_key, "results": results_key }
+            return { "report": report_key }
 
         os.system("cp -r ../grader/* .")
         if build(report_key, syscall) != 0:
-            return { "report": report_key, "results": results_key }
+            return { "report": report_key }
 
         # prevent students from accessing source code files
         shutil.copy("a.out", workdir)
