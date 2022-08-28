@@ -3,7 +3,7 @@ type points = (int * int)
 
 
 
-(* used to store output that is seen by the student *)
+(* for output that is seen by the student *)
 let report_chan : out_channel =
   try snd (Filename.open_temp_file ~mode:[Open_append] ~temp_dir:"/tmp" "cos326_report" "")
   with Sys_error _ -> raise (Sys_error "failed to create file")
@@ -11,8 +11,7 @@ let report_chan : out_channel =
 (* same as Printf.printf, but outputs to report_chan *)
 let printf326 fmt = Printf.fprintf report_chan fmt
 
-(* used to store output about intermediate progress that is used for grade
- * calculation and collection *)
+(* for intermediate progress results that is used for grade calculation and collection *)
 let results_chan : out_channel =
   try snd (Filename.open_temp_file ~mode:[Open_append] ~temp_dir:"/tmp" "cos326_results" "")
   with Sys_error _ -> raise (Sys_error "failed to create file")
@@ -102,7 +101,7 @@ let cmp_float (f1 : float) (f2 : float) : bool =
 (* given a check and a message, if the check fails print the message.
  * in either case, return the result of the check *)
 let assert326 (cond : bool) (msg : string) : bool =
-  if not cond then printf326 "> %s " msg;
+  if not cond then printf326 "\n>         %s " msg;
   flush report_chan;
   cond
 
@@ -114,11 +113,11 @@ let assert326 (cond : bool) (msg : string) : bool =
  * if not the same, print the message and fail the test *)
 let assert326' (res : 'a option) (right : 'b) (cmp : 'a -> 'b -> bool) (msg : string) : bool =
   match res with
-  | None -> (printf326 "> %s " msg; flush report_chan; false)
+  | None -> (printf326 "\n>         %s " msg; flush report_chan; false)
   | Some x ->
       if cmp x right
       then true
-      else (printf326 "> %s " msg; flush report_chan; false)
+      else (printf326 "\n>         %s " msg; flush report_chan; false)
 
 
 
@@ -128,7 +127,7 @@ let print_header (prob : string) : unit =
 
 (* in-line test description *)
 let print_check (prob : string) : unit =
-  printf326 "> %s\t" prob;
+  printf326 ">     %s       " prob;
   flush report_chan
 
 (* space-separated note for student or grader *)
