@@ -31,11 +31,18 @@ def build(report_key, syscall):
     If compiling fails, writes a report to the database key `report_key`.
     Returns the exit code from compiling.
     """
-    # note that preexec_fn makes Popen thread-unsafe
-    run = Popen("make -se", shell=True, stdout=PIPE, stderr=STDOUT,
-            preexec_fn=set_cpu_limits(30))
-    out = run.communicate()[0]
+    os.system("bash SETUP")
 
+    if os.path.exists("dune-project"):
+        # note that preexec_fn makes Popen thread-unsafe
+        run = Popen("dune build", shell=True, stdout=PIPE, stderr=STDOUT,
+                preexec_fn=set_cpu_limits(30))
+    elif os.path.exists("Makefile"):
+        # note that preexec_fn makes Popen thread-unsafe
+        run = Popen("make -s", shell=True, stdout=PIPE, stderr=STDOUT,
+                preexec_fn=set_cpu_limits(30))
+
+    out = run.communicate()[0]
     if run.returncode != 0:
         if run.returncode == -signal.SIGKILL:
             syscall.write_key(bytes(report_key, "utf-8"), b"> Timed out while compiling your code.")
@@ -49,21 +56,23 @@ def do_run(report_key, results_key, limit, syscall):
     Writes grading executable intermediate progress results to the database key
     `results_key`.
     """
-    # note that preexec_fn makes Popen thread-unsafe
-    run = Popen("ocamlrun a.out", shell=True, preexec_fn=set_cpu_limits(limit))
-    run.communicate()
+    if os.path.exists("dune-project"):
+        # note that preexec_fn makes Popen thread-unsafe
+        run = Popen("./_build/default/test/grade.exe", shell=True,
+                preexec_fn=set_cpu_limits(limit))
+    elif os.path.exists("Makefile"):
+        # note that preexec_fn makes Popen thread-unsafe
+        run = Popen("ocamlrun a.out", shell=True, preexec_fn=set_cpu_limits(limit))
 
-    report = Popen("cat /tmp/cos326_report*", shell=True, stdout=PIPE).communicate()[0]
+    run.communicate()
+    report = Popen("cat cos326_report*", shell=True, stdout=PIPE).communicate()[0]
     if run.returncode == -signal.SIGKILL:
         report += (b"\n\n> Your program was forcefully killed. The most likely"
                    b" reason for this is your code taking too long to run.")
     syscall.write_key(bytes(report_key, "utf-8"), report)
 
-    results = Popen("cat /tmp/cos326_results*", shell=True, stdout=PIPE).communicate()[0]
+    results = Popen("cat cos326_results*", shell=True, stdout=PIPE).communicate()[0]
     syscall.write_key(bytes(results_key, "utf-8"), results)
-
-    # clean up temporary files
-    os.system("rm -f /tmp/cos326_report* /tmp/cos326_results*")
 
 def app_handle(args, context, syscall):
     org_name = context["repository"].split("/")[0]
@@ -79,8 +88,6 @@ def app_handle(args, context, syscall):
 
     with tempfile.TemporaryDirectory() as workdir:
         os.chdir(workdir)
-        os.mkdir("shared")
-        os.system("cp /srv/utils326.ml /srv/precheck shared")
 
         with syscall.open_unnamed(args["submission"]) as submission_tar_file:
             os.mkdir("submission")
@@ -104,24 +111,10 @@ def app_handle(args, context, syscall):
 
         os.putenv("PATH", f"/srv/usr/bin:{os.getenv('PATH')}")
         os.putenv("OCAMLLIB", "/srv/usr/lib/ocaml")
-        os.putenv("SHARED", f"{os.path.abspath('shared')}")
-        os.putenv("GRADER", f"{os.path.abspath('grader')}")
-        os.chdir("submission")
+        os.chdir("grader")
 
-        run = Popen("../shared/precheck", stdout=PIPE)
-        out = run.communicate()[0]
-        if run.returncode != 0:
-            syscall.write_key(bytes(report_key, "utf-8"), out)
-            return { "report": report_key }
-
-        os.system("cp -r ../grader/* .")
         if build(report_key, syscall) != 0:
             return { "report": report_key }
-
-        # prevent students from accessing source code files
-        shutil.copy("a.out", workdir)
-        os.chdir(workdir)
-        os.system("rm -rf shared grader submission")
 
         do_run(report_key, results_key, assignments[assignment]["runtime_limit"], syscall)
         return { "report": report_key, "results": results_key }
