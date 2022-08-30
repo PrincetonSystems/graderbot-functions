@@ -27,11 +27,11 @@ def handle(req, syscall):
 
     users = set(req['users'])
     assignment = assignments[req["assignment"]]
-    enrollment = json.loads(syscall.read_key(bytes(f'{course}/enrollment.json', 'utf-8')) or "{}")
+    enrollments = json.loads(syscall.read_key(bytes(f'{course}/enrollments.json', 'utf-8')) or "{}")
 
     for user in users:
-        if not enrollment.get(user):
-            return { 'error': 'Only enrolled students may create assignments', 'user': user }
+        if not enrollments.get(user):
+            return { 'error': 'Only enrolled students may create assignments', 'user': user, 'course': course }
 
     group_size = (assignment["group_size"] or 1)
     if len(users) != group_size:
