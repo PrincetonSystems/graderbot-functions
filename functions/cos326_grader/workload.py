@@ -33,13 +33,13 @@ def build(report_key, syscall):
     """
     os.system("bash SETUP")
 
-    if os.path.exists("dune-project"):
-        # note that preexec_fn makes Popen thread-unsafe
-        run = Popen("dune build", shell=True, stdout=PIPE, stderr=STDOUT,
-                preexec_fn=set_cpu_limits(30))
-    elif os.path.exists("Makefile"):
+    if os.path.exists("Makefile"):
         # note that preexec_fn makes Popen thread-unsafe
         run = Popen("make -s", shell=True, stdout=PIPE, stderr=STDOUT,
+                preexec_fn=set_cpu_limits(30))
+    elif os.path.exists("dune-project"):
+        # note that preexec_fn makes Popen thread-unsafe
+        run = Popen("dune build", shell=True, stdout=PIPE, stderr=STDOUT,
                 preexec_fn=set_cpu_limits(30))
 
     out = run.communicate()[0]
@@ -56,13 +56,13 @@ def do_run(report_key, results_key, limit, syscall):
     Writes grading executable intermediate progress results to the database key
     `results_key`.
     """
-    if os.path.exists("dune-project"):
-        # note that preexec_fn makes Popen thread-unsafe
-        run = Popen("./_build/default/test/grade.exe", shell=True,
-                preexec_fn=set_cpu_limits(limit))
-    elif os.path.exists("Makefile"):
+    if os.path.exists("a.out"):
         # note that preexec_fn makes Popen thread-unsafe
         run = Popen("ocamlrun a.out", shell=True, preexec_fn=set_cpu_limits(limit))
+    else:
+        # note that preexec_fn makes Popen thread-unsafe
+        run = Popen("_build/default/test/grade.exe", shell=True,
+                preexec_fn=set_cpu_limits(limit))
 
     run.communicate()
     report = Popen("cat cos326_report*", shell=True, stdout=PIPE).communicate()[0]

@@ -1,0 +1,3 @@
+(executable
+ (name grade)
+ (libraries a1lib str unix))
