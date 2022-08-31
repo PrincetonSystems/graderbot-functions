@@ -16,7 +16,7 @@ def commit_comment(req, syscall):
             "workflow": workflow,
             "context": {
                 "repository": req["repository"]["full_name"],
-                "commit": req["after"],
+                "commit": req["comment"]["commit_id"],
                 "user": req["comment"]["user"]["login"]
             }
         }))

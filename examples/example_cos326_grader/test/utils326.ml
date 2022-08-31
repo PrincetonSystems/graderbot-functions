@@ -3,26 +3,21 @@ type points = (int * int)
 
 
 
-(* used to store output that is seen by the student *)
+(* for output that is seen by the student *)
 let report_chan : out_channel =
-  try snd (Filename.open_temp_file ~mode:[Open_append] ~temp_dir:"/tmp" "report" "")
+  try snd (Filename.open_temp_file ~mode:[Open_append] ~temp_dir:"." "cos326_report" "")
   with Sys_error _ -> raise (Sys_error "failed to create file")
 
-(* same as Printf.printf, but outputs to report_chan and always flushes *)
-let printf326 fmt =
-  let ret = Printf.fprintf report_chan fmt in
-  flush report_chan; ret
+(* same as Printf.printf, but outputs to report_chan *)
+let printf326 fmt = Printf.fprintf report_chan fmt
 
-(* used to store output about intermediate progress that is used for grade
- * calculation and collection *)
+(* for intermediate progress results that is used for grade calculation and collection *)
 let results_chan : out_channel =
-  try snd (Filename.open_temp_file ~mode:[Open_append] ~temp_dir:"/tmp" "results" "")
+  try snd (Filename.open_temp_file ~mode:[Open_append] ~temp_dir:"." "cos326_results" "")
   with Sys_error _ -> raise (Sys_error "failed to create file")
 
-(* same as Printf.printf, but outputs to results_chan and always flushes *)
-let rprintf326 fmt =
-  let ret = Printf.fprintf results_chan fmt in
-  flush results_chan; ret
+(* same as Printf.printf, but outputs to results_chan *)
+let rprintf326 fmt = Printf.fprintf results_chan fmt
 
 (* returns the value associated with var in the process environment or the empty
  * string if var is unbound *)
@@ -37,9 +32,9 @@ let get_envvar (var : string) : string =
 let tally (running : points) (this : bool) : points =
   let (rc, rt) = running in
   if this then
-    (printf326 "--> passed\n"; flush stdout; (rc+1, rt+1))
+    (printf326 "--> passed\n"; flush report_chan; (rc+1, rt+1))
   else
-    (printf326 "--> FAILED\n"; flush stdout; (rc, rt+1))
+    (printf326 "--> FAILED\n"; flush report_chan; (rc, rt+1))
 
 (* so_far tracks correct problems
  * tally tracks passed tests in current problem
@@ -50,16 +45,16 @@ let count_prob (so_far : points) (tally : points) (worth : points) : points =
   let (n, d) = worth in
   if tc = tt then
     (
-      rprintf326 "\n%s\nProblem passed (%d / %d points)\n%s\n" snippet_delim n d snippet_delim;
+      rprintf326 "Problem passed (%d / %d points)\n" n d;
       printf326 "\n%s\nProblem passed (%d / %d points)\n%s\n" snippet_delim n d snippet_delim;
-      flush stdout;
+      flush results_chan; flush report_chan;
       (sc+1, st+1)
     )
   else
     (
-      rprintf326 "\n%s\nProblem FAILED (%d / %d points)\n%s\n" snippet_delim n d snippet_delim;
+      rprintf326 "Problem FAILED (%d / %d points)\n" n d;
       printf326 "\n%s\nProblem FAILED (%d / %d points)\n%s\n" snippet_delim n d snippet_delim;
-      flush stdout;
+      flush results_chan; flush report_chan;
       (sc, st+1)
     )
 
@@ -72,16 +67,16 @@ let count_prob_opt (so_far : points) (tally : points) (worth : points) : points 
   let (n, d) = worth in
   if tc = tt then
     (
-      rprintf326 "\n%s\nOptional problem passed (%d / %d points)\n%s\n" snippet_delim n d snippet_delim;
+      rprintf326 "Optional problem passed (%d / %d points)\n" n d;
       printf326 "\n%s\nOptional problem passed (%d / %d points)\n%s\n" snippet_delim n d snippet_delim;
-      flush stdout;
+      flush results_chan; flush report_chan;
       (sc+1, st+1)
     )
   else
     (
-      rprintf326 "\n%s\nOptional problem FAILED (%d / %d points)\n%s\n" snippet_delim n d snippet_delim;
+      rprintf326 "Optional problem FAILED (%d / %d points)\n" n d;
       printf326 "\n%s\nOptional problem FAILED (%d / %d points)\n%s\n" snippet_delim n d snippet_delim;
-      flush stdout;
+      flush results_chan; flush report_chan;
       (sc, st+1)
     )
 
@@ -106,8 +101,8 @@ let cmp_float (f1 : float) (f2 : float) : bool =
 (* given a check and a message, if the check fails print the message.
  * in either case, return the result of the check *)
 let assert326 (cond : bool) (msg : string) : bool =
-  if not cond then printf326 "> %s " msg;
-  flush stdout;
+  if not cond then printf326 "\n>         %s " msg;
+  flush report_chan;
   cond
 
 (* given student result, intended result, a comparison function, and a message:
@@ -118,27 +113,27 @@ let assert326 (cond : bool) (msg : string) : bool =
  * if not the same, print the message and fail the test *)
 let assert326' (res : 'a option) (right : 'b) (cmp : 'a -> 'b -> bool) (msg : string) : bool =
   match res with
-  | None -> (printf326 "> %s " msg; flush stdout; false)
+  | None -> (printf326 "\n>         %s " msg; flush report_chan; false)
   | Some x ->
       if cmp x right
       then true
-      else (printf326 "> %s " msg; flush stdout; false)
+      else (printf326 "\n>         %s " msg; flush report_chan; false)
 
 
 
 let print_header (prob : string) : unit =
   printf326 "\n### %s\n\n" prob;
-  flush stdout
+  flush report_chan
 
 (* in-line test description *)
 let print_check (prob : string) : unit =
-  printf326 "> %s\t" prob;
-  flush stdout
+  printf326 ">     %s       " prob;
+  flush report_chan
 
 (* space-separated note for student or grader *)
 let print_note (note : string) : unit =
   printf326 "**%s**\n\n" note;
-  flush stdout
+  flush report_chan
 
 (* string_of_list, taking string_of_(payloadtype) as an argument*)
 let printer (f) (xs) : string =

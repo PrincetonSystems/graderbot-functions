@@ -1,7 +1,7 @@
 open Utils326
+open A1lib
 
 let probs_right : points = (0, 0)
-let total_points : points = (0, 0)
 let opt_probs_right : points = (0, 0)
 let opt_total_points : points = (0, 0)
 
@@ -22,4 +22,3 @@ let total = (0, 0)
 
 let total = tally total (assert326 (prob1 = "Hello World!") "1 does not print correct message")
 let probs_right = count_prob probs_right total (fst total, 1)
-let total_points = total

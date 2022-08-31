@@ -1,4 +1,4 @@
-FUNCTIONS=start_assignment gh_repo go_grader grades generate_report cos326_grader
+FUNCTIONS=start_assignment gh_repo go_grader grades generate_report cos326_grader cos326_parse_results cos326_parse_comment
 OUTPUTS=$(patsubst %, output/%.img, $(FUNCTIONS))
 RUNS=$(patsubst %, run/%, $(FUNCTIONS))
 
@@ -25,11 +25,14 @@ output/%_submission.tgz: examples/%_submission/*
 	tar -C examples -czf $@ $*_submission/
 
 .PHONY: prepdb
-prepdb: output/example_cos316_grader.tgz output/example_cos316_submission.tgz output/example_cos326_submission.tgz output/example_cos326_grader.tgz
-	sfdb -b cos316/example/grading_script - < output/example_cos316_grader.tgz
-	sfdb -b github/cos316/example/submission.tgz - < output/example_cos316_submission.tgz
-	sfdb -b cos326-f22/example/grading_script - < output/example_cos326_grader.tgz
-	sfdb -b github/cos326-f22/example/submission.tgz - < output/example_cos326_submission.tgz
+prepdb: output/example_cos316_grader.tgz output/example_cos316_submission.tgz output/example_cos326_grader.tgz output/example_cos326_submission.tgz
+	sfdb cos316/example/grading_script - < output/example_cos316_grader.tgz
+	sfdb github/cos316/example/submission.tgz - < output/example_cos316_submission.tgz
+	sfdb cos326-f22/assignments '{"example": {"grading_script": "cos326-f22/example/grading_script", "runtime_limit": 1}}'
+	sfdb cos326-f22/enrollments.json '{"grader@princeton.edu": {"type": "Staff"}}'
+	sfdb users/github/from/ghost 'grader@princeton.edu'
+	sfblob < output/example_cos326_grader.tgz | tr -d '\n' | sfdb cos326-f22/example/grading_script -
+	sfblob < output/example_cos326_submission.tgz | tr -d '\n' | sfdb github/cos326-f22/example/submission.tgz -
 
 run/%: output/%.img payloads/%.jsonl
 	@singlevm --mem_size 1024 --kernel vmlinux-4.20.0 --rootfs python3.ext4 --appfs output/$*.img --network < payloads/$*.jsonl

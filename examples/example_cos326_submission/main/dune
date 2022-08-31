@@ -1,0 +1,8 @@
+(executable
+ (name main)
+ (libraries a1lib))
+
+(install
+ (section bin)
+ (files
+  (main.exe as a1)))

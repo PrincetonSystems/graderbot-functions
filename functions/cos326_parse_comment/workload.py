@@ -17,6 +17,7 @@ def handle(req, syscall):
 
 def app_handle(args, context, syscall):
     key = f"github/{context['repository']}/extra_grades"
+    api_route = f"/repos/{context['repository']}/commits/{context['commit']}/comments"
 
     github_user = context["user"]
     user_email = syscall.read_key(bytes(f"users/github/from/{github_user}", "utf-8")).decode("utf-8").strip()
@@ -25,37 +26,43 @@ def app_handle(args, context, syscall):
     enrollment = json.loads(syscall.read_key(bytes(f"{org_name}/enrollments.json", "utf-8")))
 
     user = enrollment.get(user_email)
-    if not user or user["type"] != "Staff":
+    if not user:
         return {}
 
     extra = json.loads(syscall.read_key(bytes(key, "utf-8")) or "{}")
-    p1 = re.compile(r" *grade +(\w+ +)?([+-]?\d+)( */ *(\d+))?", re.IGNORECASE)
+    p1 = re.compile(r" *grade +(\w+) +([+-]?\d+)( */ *(\d+))?", re.IGNORECASE)
     p2 = re.compile(r" *special +note: +(.+)", re.IGNORECASE)
     for num, line in enumerate(args["comment"].splitlines()):
-        if line == "": # end of header indicator
+        # end of header indicator
+        if line == "":
             break
+
         match = p1.match(line)
         if match:
             grade = { "earned": int(match.group(2)) }
             if match.group(4):
                 grade["total"] = int(match.group(4))
+            extra[match.group(1).lower()] = grade
+            continue
 
-            if match.group(1):
-                extra[match.group(1).strip().lower()] = grade
-            else:
-                extra = extra | grade
-        else:
-            match = p2.match(line)
-            if match:
-                extra["special note"] = match.group(1)
-            else: # could not match header line to any pattern
-                api_route = f"/repos/{context['repository']}/commits/{context['commit']}/comments"
-                body = {
-                    "body": f"Unable to parse comment line number {num}.\n"
-                            f"@{github_user}, make sure the line is formatted correctly."
-                }
-                syscall.github_rest_post(api_route, body);
-                return {}
+        match = p2.match(line)
+        if match:
+            extra.setdefault("special note", []).append(match.group(1))
+            continue
 
-    syscall.write_key(bytes(key, "utf-8"), bytes(json.dumps(extra), "utf-8"))
-    return { "remarks": key }
+        # could not match header line to any pattern
+        if user["type"] == "Staff":
+            body = {
+                "body": (f"Unable to parse comment line number {num+1}.\n"
+                         f"@{github_user}, make sure the line is formatted correctly.")
+            }
+            syscall.github_rest_post(api_route, body)
+        return {}
+
+    if user["type"] == "Staff":
+        syscall.write_key(bytes(key, "utf-8"), bytes(json.dumps(extra), "utf-8"))
+        return { "remarks": key }
+    else:
+        body = { "body": f"@{github_user}, are you looking for trouble?" }
+        syscall.github_rest_post(api_route, body)
+        return {}
