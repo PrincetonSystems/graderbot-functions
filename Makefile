@@ -32,7 +32,7 @@ prepdb: output/example_cos316_grader.tgz output/example_cos316_submission.tgz ou
 	sfdb -b github/cos326-f22/example/submission.tgz - < output/example_cos326_submission.tgz
 
 run/%: output/%.img payloads/%.jsonl
-	@singlevm --mem_size 1024 --kernel vmlinux-4.20.0 --rootfs python3.ext4 --appfs output/$*.img < payloads/$*.jsonl
+	@singlevm --mem_size 1024 --kernel vmlinux-4.20.0 --rootfs python3.ext4 --appfs output/$*.img --network < payloads/$*.jsonl
 	@touch $@
 
 .PHONY: clean
