@@ -18,7 +18,7 @@ def handle(req, syscall):
     return result
 
 def app_handle(args, context, syscall):
-    grader_config = "cos316/%s/grader_config" % context["metadata"]["assignment"]
+    grader_config = "%s/%s/grader_config" % (context["repository"].split('/')[0], context["metadata"]["assignment"])
     config = json.loads(syscall.read_key(bytes(grader_config, "utf-8")))
     delim = config["subtest"]["delim"]
     grade = json.loads(syscall.read_key(bytes(args["grade_report"], "utf-8")))
