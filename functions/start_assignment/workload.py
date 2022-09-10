@@ -33,9 +33,12 @@ def handle(req, syscall):
         if not enrollments.get(user):
             return { 'error': 'Only enrolled students may create assignments', 'user': user, 'course': course }
 
-    group_size = (assignment["group_size"] or 1)
-    if len(users) != group_size:
-        return { 'error': 'This assignment requires a group size of %d, given %d.' % (group_size, len(users)) }
+    max_group_size = (assignment.get("max_group_size") or 1)
+    if len(users) > max_group_size:
+        return { 'error': 'This assignment allows a group size of at most %d, given %d.' % (max_group_size, len(users)) }
+    min_group_size = (assignment.get("min_group_size") or 1)
+    if len(users) < min_group_size:
+        return { 'error': 'This assignment requires a group size of at least %d, given %d.' % (min_group_size, len(users)) }
 
     for user in users:
         repo = syscall.read_key(bytes('%s/assignments/%s/%s' % (course, req["assignment"], user), 'utf-8'));
