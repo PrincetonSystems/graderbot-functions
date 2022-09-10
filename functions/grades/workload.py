@@ -45,7 +45,7 @@ def app_handle(args, context, syscall):
         "push_date": context["push_date"]
     }
 
-    key = os.path.join(os.path.dirname(args["test_results"]),"grade.json")
+    key = f"github/{context['repository']}/{context['commit']}/grade.json"
     syscall.write_key(bytes(key, "utf-8"), bytes(json.dumps(output), "utf-8"))
 
     return {
