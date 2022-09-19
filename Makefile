@@ -7,13 +7,13 @@ all: $(OUTPUTS) #$(RUNS)
 
 output/%.img: functions/%/*
 	@truncate -s 500M $@
-	@mkfs.ext4 -F $@
+	@mkfs.ext2 -F $@
 	@ \
 		if [ -f functions/$*/Makefile ]; then \
 			make -C functions/$*; \
-			cptofs -t ext4 -i $@ functions/$*/out/* /; \
+			cptofs -t ext2 -i $@ functions/$*/out/* /; \
 		else \
-			cptofs -t ext4 -i $@ functions/$*/* /; \
+			cptofs -t ext2 -i $@ functions/$*/* /; \
 		fi
 	@e2fsck -f $@
 	@resize2fs -M $@
