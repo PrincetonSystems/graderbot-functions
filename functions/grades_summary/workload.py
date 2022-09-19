@@ -13,11 +13,13 @@ def handle(req, syscall):
         repo = syscall.read_key(bytes(f"cos316-f22/assignments/{req['assignment']}/{user}", "utf-8")).decode('utf-8')
         grades = map(lambda g: g["grade"],
             map(json.loads,
-                map(lambda s: syscall.read_key(bytes(f"github/{repo}/{s}grade.json", 'utf-8')).decode('utf-8'),
-                    filter(lambda e: e != 'refs/' and e.endswith('/'), syscall.read_dir(f"github/{repo}"))
+                filter(lambda s: s,
+                    map(lambda s: syscall.read_key(bytes(f"github/{repo}/{s}grade.json", 'utf-8')).decode('utf-8'),
+                        filter(lambda e: e != 'refs/' and e.endswith('/'), syscall.read_dir(f"github/{repo}"))
+                    )
                 )
             )
         )
-        results[user] = max(grades)
+        results[user] = max(grades, default=0)
     return { "results": results }
 
