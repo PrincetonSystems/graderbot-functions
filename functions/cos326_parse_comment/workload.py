@@ -60,9 +60,21 @@ def app_handle(args, context, syscall):
         return {}
 
     if user["type"] == "Staff":
+        if "repo graders" in extra:
+            extra["repo graders"] = list(set(extra["repo graders"]) | {github_user})
+        else:
+            extra["repo graders"] = [github_user]
         syscall.write_key(bytes(key, "utf-8"), bytes(json.dumps(extra), "utf-8"))
         return { "remarks": key }
     else:
-        body = { "body": f"@{github_user}, are you looking for trouble?" }
+        instructors = json.loads(syscall.read_key(bytes(f"{org_name}/instructors", "utf-8")))
+        instructor_githubs = [syscall.read_key(bytes(f"users/github/for/user/{instructor}", "utf-8")).decode("utf-8").strip() for instructor in instructors]
+        github_mentions = ", ".join([f"@{user}" for user in instructor_githubs])
+
+        body = {
+            "body": (f"@{github_user}, are you looking for trouble?\n"
+                     f"{github_mentions}, there has been an unauthorized"
+                      " attempt at creating a grader comment.")
+        }
         syscall.github_rest_post(api_route, body)
         return {}
