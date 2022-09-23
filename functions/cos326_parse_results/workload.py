@@ -115,7 +115,12 @@ def app_handle(args, context, syscall):
         }), "utf-8"))
 
     final_report.extend([bytes(line, "utf-8") for line in summary])
-    final_report.append(syscall.read_key(bytes(args["report"], "utf-8")))
+    initial_report = syscall.read_key(bytes(args["report"], "utf-8"))
+    if initial_report != b"":
+        final_report.append(initial_report)
+    else:
+        final_report.append(b"Your code raised an exception before the grading"
+                            b" code could run, so this is all we could do.")
 
     syscall.write_key(bytes(report_key, "utf-8"), b"\n".join(final_report))
     return { "report": report_key }
