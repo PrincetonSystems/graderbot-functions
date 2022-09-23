@@ -64,6 +64,7 @@ def app_handle(args, context, syscall):
             extra["repo graders"] = list(set(extra["repo graders"]) | {github_user})
         else:
             extra["repo graders"] = [github_user]
+        extra["commit graded"] = context["commit"]
         syscall.write_key(bytes(key, "utf-8"), bytes(json.dumps(extra), "utf-8"))
         return { "remarks": key }
     else:
