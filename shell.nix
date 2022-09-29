@@ -1,7 +1,7 @@
 {
   pkgs ? import <nixpkgs> {},
-  snapfaasSha256 ? "sha256-ZJS7GDW7lBILrMKrKXxLAw5gjKunSai27RO3oZvJAn4=",
-  snapfaasRev ? "9791be9d108dd45abf50d9a62681d7a0f61613d5",
+  snapfaasSha256 ? "sha256-ZPqCq5vCyp/ej2m+w5KdWaPSj32xfA3g9k/tqDPFcDs=",
+  snapfaasRev ? "259ec6d4fcdca97851960a07fe1782a63b79a0a6",
   snapfaasSrc ? pkgs.fetchFromGitHub {
     owner = "princeton-sns";
     repo = "snapfaas";

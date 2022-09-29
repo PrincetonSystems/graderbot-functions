@@ -19,7 +19,7 @@ def app_handle(args, context, syscall):
     test_lines = [ json.loads(line) for line in syscall.read_key(bytes(args["test_results"], "utf-8")).split(b'\n') ]
     test_runs = dict((line['test'], line) for line in test_lines if 'test' in line)
 
-    grader_config = "cos316/%s/grader_config" % context["metadata"]["assignment"]
+    grader_config = "%s/%s/grader_config" % (context["repository"].split('/')[0], context["metadata"]["assignment"])
     config = json.loads(syscall.read_key(bytes(grader_config, "utf-8")))
 
     total_points = sum([ test["points"] for test in config["tests"].values() if "extraCredit" not in test or not test["extraCredit"]])
@@ -45,7 +45,7 @@ def app_handle(args, context, syscall):
         "push_date": context["push_date"]
     }
 
-    key = os.path.join(os.path.dirname(args["test_results"]),"grade.json")
+    key = f"github/{context['repository']}/{context['commit']}/grade.json"
     syscall.write_key(bytes(key, "utf-8"), bytes(json.dumps(output), "utf-8"))
 
     return {

@@ -19,7 +19,13 @@ sound sky shape surf thunder violet water wildflower
 wave water resonance sun log dream cherry tree fog
 frost voice paper frog smoke star""".split()
 
-def handle(req, syscall):
+def handle(request, syscall):
+    login = None
+    req = request
+    if request.get("payload"):
+        login = request["login"]
+        req = request["payload"]
+
     course = req["course"]
     assignments = json.loads(syscall.read_key(bytes(f'{course}/assignments', "utf-8")))
     if req["assignment"] not in assignments:
@@ -29,20 +35,35 @@ def handle(req, syscall):
     assignment = assignments[req["assignment"]]
     enrollments = json.loads(syscall.read_key(bytes(f'{course}/enrollments.json', 'utf-8')) or "{}")
 
+    if login and not (login in users or enrollments.get(login) and enrollments.get(login)["type"] == "Staff"):
+        return { 'error': 'You can only create an assignment repository that you are in',
+                 'users': list(users), 'course': course, 'login': login }
+
     for user in users:
         if not enrollments.get(user):
             return { 'error': 'Only enrolled students may create assignments', 'user': user, 'course': course }
 
-    group_size = (assignment["group_size"] or 1)
-    if len(users) != group_size:
-        return { 'error': 'This assignment requires a group size of %d, given %d.' % (group_size, len(users)) }
+    max_group_size = (assignment.get("max_group_size") or 1)
+    if len(users) > max_group_size:
+        return { 'error': 'This assignment allows a group size of at most %d, given %d.' % (max_group_size, len(users)) }
+    min_group_size = (assignment.get("min_group_size") or 1)
+    if len(users) < min_group_size:
+        return { 'error': 'This assignment requires a group size of at least %d, given %d.' % (min_group_size, len(users)) }
 
+    gh_handles = []
     for user in users:
         repo = syscall.read_key(bytes('%s/assignments/%s/%s' % (course, req["assignment"], user), 'utf-8'));
         if repo:
             return {
                 'error': ("%s is already completing %s at %s" % (user, req['assignment'], repo.decode('utf-8')))
             }
+        gh_handle = syscall.read_key(bytes(f"users/github/for/user/{user}", 'utf-8'))
+        if not gh_handle:
+            return {
+                'error': (f"No associated GitHub account for user {user}")
+            }
+        gh_handles.append(gh_handle.decode('utf-8'))
+
 
     resp = None
     name = None
@@ -60,7 +81,7 @@ def handle(req, syscall):
         elif i == 2:
             return { 'error': "Can't find a unique repository name", "status": resp.status }
 
-    for user in req['gh_handles']:
+    for user in gh_handles:
         api_route = "/repos/%s/%s/collaborators/%s" % (course, name, user)
         body = {
             'permission': 'push'

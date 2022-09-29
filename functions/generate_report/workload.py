@@ -18,7 +18,7 @@ def handle(req, syscall):
     return result
 
 def app_handle(args, context, syscall):
-    grader_config = "cos316/%s/grader_config" % context["metadata"]["assignment"]
+    grader_config = "%s/%s/grader_config" % (context["repository"].split('/')[0], context["metadata"]["assignment"])
     config = json.loads(syscall.read_key(bytes(grader_config, "utf-8")))
     delim = config["subtest"]["delim"]
     grade = json.loads(syscall.read_key(bytes(args["grade_report"], "utf-8")))
@@ -62,6 +62,6 @@ def app_handle(args, context, syscall):
                 output.append("                               -- test failed (-%d) --" % test["conf"]["points"])
             else:
                 output.append("                               -- test passed --")
-    key = "%s-report.md" % os.path.splitext(args["grade_report"])[0]
+    key = f"github/{context['repository']}/{context['commit']}/grade-report.md"
     syscall.write_key(bytes(key, "utf-8"), bytes('\n'.join(output), 'utf-8'))
     return { "report": key }

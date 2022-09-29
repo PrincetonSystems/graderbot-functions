@@ -30,12 +30,12 @@ def push(req, syscall):
     meta_key = "github/%s/_meta" % (req["repository"]["full_name"])
     workflow_key = "github/%s/_workflow" % (req["repository"]["full_name"])
 
+    workflow = json.loads(syscall.read_key(bytes(workflow_key, "utf-8")) or "[]")
+    while isinstance(workflow, str):
+        workflow = json.loads(syscall.read_key(bytes(workflow, "utf-8")) or "[]")
     metadataString = syscall.read_key(bytes(meta_key, "utf-8")) or "{}"
-    if metadataString:
+    if len(workflow):
         metadata = json.loads(metadataString)
-        workflow = json.loads(syscall.read_key(bytes(workflow_key, "utf-8")) or "[]")
-        while isinstance(workflow, str):
-            workflow = json.loads(syscall.read_key(bytes(workflow, "utf-8")) or "[]")
 
         resp = syscall.github_rest_get("/repos/%s/tarball/%s" % (req["repository"]["full_name"], req["after"]), toblob=True);
         syscall.write_key(bytes(key, "utf-8"), resp.data)
