@@ -52,6 +52,7 @@ def push(req, syscall):
                     "repository": req["repository"]["full_name"],
                     "commit": req["after"],
                     "push_date": req["repository"]["pushed_at"],
+                    "pusher": req["pusher"]["name"],
                     "metadata": metadata
                 }
             }))
