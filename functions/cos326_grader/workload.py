@@ -78,6 +78,10 @@ def app_handle(args, context, syscall):
     key = f"github/{context['repository']}/{context['commit']}"
     report_key = key + "/report"
     results_key = key + "/results"
+    keys = { "report": report_key }
+    user_email = syscall.read_key(bytes(f"users/github/from/{context['pusher']}", "utf-8")).decode("utf-8").strip()
+    if user_email not in context["metadata"]["users"]:
+        keys["fixed"] = True
 
     assignments = json.loads(syscall.read_key(bytes(f"{org_name}/assignments", "utf-8")))
     assignment = context["metadata"]["assignment"]
@@ -112,7 +116,8 @@ def app_handle(args, context, syscall):
         os.chdir("grader")
 
         if build(report_key, syscall) != 0:
-            return { "report": report_key }
+            return keys
 
         do_run(report_key, results_key, assignments[assignment]["runtime_limit"], syscall)
-        return { "report": report_key, "results": results_key }
+        keys["results"] = results_key
+        return keys

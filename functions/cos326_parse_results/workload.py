@@ -100,19 +100,22 @@ def app_handle(args, context, syscall):
                 summary.append(f"    - Pending: _ / {opt_stats['pending']}")
         summary[-1] += "\n"
 
-        syscall.write_key(bytes(key + "/grade.json", "utf-8"), bytes(json.dumps({
+        grades = {
             "grade": stats["points"] / stats["total_points"],
             "given": stats["points"],
             "total": stats["total_points"],
             "push_date": context["push_date"]
-        }), "utf-8"))
+        }
     else:
         # grading code never got to run in this case
         summary.append("## Grade: 0.00%\n")
-        syscall.write_key(bytes(key + "/grade.json", "utf-8"), bytes(json.dumps({
+        grades = {
             "grade": 0,
             "push_date": context["push_date"]
-        }), "utf-8"))
+        }
+    if "fixed" in args:
+        grades["fixed"] = True
+    syscall.write_key(bytes(key + "/grade.json", "utf-8"), bytes(json.dumps(grades), "utf-8"))
 
     final_report.extend([bytes(line, "utf-8") for line in summary])
     initial_report = syscall.read_key(bytes(args["report"], "utf-8"))
