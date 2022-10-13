@@ -46,6 +46,9 @@ be present.
             script is stored
         - `results`*: the database key under which grading script intermediate
             progress results are stored
+        - `fixed`*: if this key is used, indicates that the commit was made by
+            someone other than the student(s) working on the assignment (e.g. a
+            grader making changes to make the code compile)
 - `cos326_parse_comment`: Stores relevant data from commit comments.
     - `args`:
         - `comment`: byte array containing raw comment
@@ -57,6 +60,9 @@ be present.
         - `report`: the database key under which an initial report is stored
         - `results` (optional): the database key under which intermediate
             progress results are stored
+        - `fixed` (optional): indicates that the commit was made by someone
+            other than the student(s) working on the assignment and should be
+            appropriately recorded in the database
     - Returns:
         - `report`: the database key under which the finalized report is stored
 - `generate_report`:
