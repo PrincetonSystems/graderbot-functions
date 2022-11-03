@@ -102,4 +102,4 @@ def handle(request, syscall):
         syscall.write_key(bytes('%s/assignments/%s/%s' % (course, req["assignment"], user), 'utf-8'),
                           bytes("%s/%s" % (course, name), 'utf-8'))
 
-    return { 'name': name, 'users': list(users), 'github_handles': req['gh_handles'] }
+    return { 'name': name, 'users': list(users) }
