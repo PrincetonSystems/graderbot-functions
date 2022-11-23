@@ -7,43 +7,49 @@ def handle(req, syscall):
 
     enrollments = json.loads(syscall.read_key(bytes(f"{req['course']}/enrollments.json", "utf-8")))
     if login not in enrollments or enrollments.get(login)["type"] != "Staff":
-        return { "error": "Only course staff can view grades" }
+        return { "error": "Only course staff can view submissions" }
     assignments = json.loads(syscall.read_key(bytes(f"{req['course']}/assignments", "utf-8")))
     if req["asgn"] not in assignments:
         return { "error": "Could not find assignment" }
 
-    all_repos = syscall.read_dir(f"github/{req['course']}")
-    assignment_repos = [repo for repo in all_repos if repo.startswith(req["asgn"] + "-")]
-
-    results = []
-    for repo in assignment_repos:
-        # skip repos for students that dropped and staff repos
-        meta = syscall.read_key(bytes(f"github/{req['course']}/{repo}_meta", "utf-8"))
-        if meta == b"":
-            continue
-        email = json.loads(meta)["users"][0] # assumes one user only
-        if email not in enrollments or enrollments.get(email)["type"] == "Staff":
+    repo_to_email = {}
+    repo_to_commit = {}
+    for email in enrollments:
+        # skip staff repos
+        if enrollments.get(email)["type"] == "Staff":
             continue
 
-        # find all commits of repo if it is ungraded
-        all_keys = list(syscall.read_dir(f"github/{req['course']}/{repo}"))
+        repo = syscall.read_key(bytes(f"{req['course']}/assignments/{req['asgn']}/{email}", "utf-8")).decode("utf-8")
+        if repo == "":
+            continue
+        if repo in repo_to_email:
+            repo_to_email[repo].append(email)
+            continue
+
+        # find all repo commits if it is ungraded
+        all_keys = list(syscall.read_dir(f"github/{repo}"))
         if "extra_grades" in all_keys:
             continue
         commits = [key for key in all_keys if key.endswith("/") and key != "refs/"]
+        if len(commits) < 2: # assumes graderbot commit always exists
+            continue
 
         # find latest commit of repo
         pairs = []
         for commit in commits:
-            grade = syscall.read_key(bytes(f"github/{req['course']}/{repo}{commit}grade.json", "utf-8"))
+            grade = syscall.read_key(bytes(f"github/{repo}/{commit}grade.json", "utf-8"))
             if grade == b"":
                 continue
-            push_date = json.loads(grade)["push_date"]
-            pairs.append((push_date, commit))
+            pairs.append((json.loads(grade)["push_date"], commit))
         pairs.sort(key=lambda t: t[0], reverse=True)
 
-        # only template repos should have not graded commits
-        # exclude repos that don't have any student commits
+        # only template repos should have no graded commits
         if len(pairs) > 1:
-            results.append(f"https://github.com/{req['course']}/{repo}commit/{pairs[0][1].strip('/')} {email[:-14]} {enrollments.get(email)['name']} {datetime.utcfromtimestamp(pairs[0][0]).replace(tzinfo=timezone.utc).astimezone(tz=None).strftime('%D %T %z')}")
+            repo_to_email[repo] = [email]
+            repo_to_commit[repo] = pairs[0][1].strip('/')
 
+    results = []
+    for repo, emails in repo_to_email.items():
+        students = " ".join([f"{email[:-14]} {enrollments.get(email)['name']}" for email in emails])
+        results.append(f"https://github.com/{repo}/commit/{repo_to_commit[repo]} {students} {datetime.utcfromtimestamp(pairs[0][0]).replace(tzinfo=timezone.utc).astimezone(tz=None).strftime('%D %T %z')}")
     return { "results": results }
