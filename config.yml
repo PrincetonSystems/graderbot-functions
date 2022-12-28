@@ -58,3 +58,21 @@ functions:
     runtimefs: "python3.ext4"
     appfs: "post_comment.img"
     concurrency_limit: 100
+  cos326_find_ungraded:
+    vcpus: 1
+    memory: 128
+    runtimefs: "python3.ext4"
+    appfs: "cos326_find_ungraded.img"
+    concurrency_limit: 100
+  cos326_find_not_submitted:
+    vcpus: 1
+    memory: 128
+    runtimefs: "python3.ext4"
+    appfs: "cos326_find_not_submitted.img"
+    concurrency_limit: 100
+  cos326_grades:
+    vcpus: 1
+    memory: 128
+    runtimefs: "python3.ext4"
+    appfs: "cos326_grades.img"
+    concurrency_limit: 100

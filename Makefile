@@ -1,4 +1,4 @@
-FUNCTIONS=start_assignment gh_repo go_grader grades generate_report cos326_grader cos326_parse_results cos326_parse_comment
+FUNCTIONS=start_assignment gh_repo go_grader grades generate_report cos326_grader cos326_parse_results cos326_parse_comment cos326_find_ungraded cos326_find_not_submitted cos326_grades
 OUTPUTS=$(patsubst %, output/%.img, $(FUNCTIONS))
 RUNS=$(patsubst %, run/%, $(FUNCTIONS))
 
@@ -31,6 +31,7 @@ prepdb: output/example_cos316_grader.tgz output/example_cos316_submission.tgz ou
 	sfdb cos326-f22/assignments '{"example": {"grading_script": "cos326-f22/example/grading_script", "runtime_limit": 1}}'
 	sfdb cos326-f22/enrollments.json '{"grader@princeton.edu": {"type": "Staff"}}'
 	sfdb cos326-f22/instructors '["grader@princeton.edu"]'
+	sfdb cos326-f22/maxes '{"example": {"autograder": 1}}'
 	sfdb users/github/from/ghost 'grader@princeton.edu'
 	sfdb users/github/for/user/grader@princeton.edu 'ghost'
 	sfblob < output/example_cos326_grader.tgz | tr -d '\n' | sfdb cos326-f22/example/grading_script -
