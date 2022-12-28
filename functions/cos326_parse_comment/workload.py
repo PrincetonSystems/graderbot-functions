@@ -30,7 +30,7 @@ def app_handle(args, context, syscall):
         return {}
 
     extra = json.loads(syscall.read_key(bytes(key, "utf-8")) or "{}")
-    p1 = re.compile(r" *grade +(\w+) +([+-]?\d+)( */ *(\d+))?", re.IGNORECASE)
+    p1 = re.compile(r" *grade +(\w[\w/]*) +([+-]?\d+)( */ *(\d+))?", re.IGNORECASE)
     p2 = re.compile(r" *special +note: +(.+)", re.IGNORECASE)
     for num, line in enumerate(args["comment"].splitlines()):
         # end of header indicator
