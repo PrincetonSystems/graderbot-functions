@@ -81,8 +81,11 @@ def handle(req, syscall):
         for late_days_alloc in allocations(len(assignments), 4):
             grade, grade_alloc = 0, {}
             for i, asgn in enumerate(assignments):
-                extended = (datetime.strptime(assignments[asgn]["deadline"], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc) + timedelta(days=late_days_alloc[i])).timestamp()
-                points = find_max(autograded[asgn], extended)
+                extended = (datetime.strptime(assignments[asgn]["soft_deadline"], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc) + timedelta(days=late_days_alloc[i])).timestamp()
+                if "hard_deadline" in assignments[asgn]:
+                    points = find_max(autograded[asgn], min(extended, datetime.strptime(assignments[asgn]["hard_deadline"], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc).timestamp()))
+                else:
+                    points = find_max(autograded[asgn], extended)
                 total_earned = sum([student.get(f"{asgn}-{category}", 0) for category in maxes[asgn] if category != "autograder"]) + points
                 grade += assignments[asgn]["weight"] * total_earned / sum(maxes[asgn].values())
                 grade_alloc[asgn] = points
