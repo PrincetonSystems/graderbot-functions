@@ -83,7 +83,8 @@ def handle(req, syscall):
             for i, asgn in enumerate(assignments):
                 extended = (datetime.strptime(assignments[asgn]["deadline"], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc) + timedelta(days=late_days_alloc[i])).timestamp()
                 points = find_max(autograded[asgn], extended)
-                grade += assignments[asgn]["weight"] * points / maxes[asgn]["autograder"]
+                total_earned = sum([student.get(f"{asgn}-{category}", 0) for category in maxes[asgn] if category != "autograder"]) + points
+                grade += assignments[asgn]["weight"] * total_earned / sum(maxes[asgn].values())
                 grade_alloc[asgn] = points
             if grade > max_grade:
                 max_grade, max_grade_alloc = grade, grade_alloc
