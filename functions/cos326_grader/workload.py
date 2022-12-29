@@ -80,7 +80,7 @@ def app_handle(args, context, syscall):
     results_key = key + "/results"
     keys = { "report": report_key }
     user_email = syscall.read_key(bytes(f"users/github/from/{context['pusher']}", "utf-8")).decode("utf-8").strip()
-    if user_email not in context["metadata"]["users"]:
+    if not (user_email in context["metadata"]["users"] or user_email == "graderbot"):
         keys["fixed"] = True
 
     assignments = json.loads(syscall.read_key(bytes(f"{org_name}/assignments", "utf-8")))
