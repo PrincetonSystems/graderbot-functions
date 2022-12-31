@@ -104,7 +104,7 @@ def handle(req, syscall):
             max_student[f"{asgn}-{cname}"] = cmax
 
     s = io.StringIO()
-    writer = csv.DictWriter(s, fieldnames=fieldnames)
+    writer = csv.DictWriter(s, fieldnames=fieldnames, extrasaction='ignore')
     writer.writeheader()
     writer.writerow(max_student)
     writer.writerows(student_grades)
