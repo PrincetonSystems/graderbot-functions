@@ -42,6 +42,7 @@ def handle(req, syscall):
     maxes = json.loads(syscall.read_key(bytes(f"{req['course']}/maxes", "utf-8")))
 
     student_grades = []
+    student_late_days = []
 
     for email in enrollments:
         # skip staff
@@ -53,8 +54,10 @@ def handle(req, syscall):
         student = { "lastname": name[-1], "firstname": name[0], "netid": email[:-14], "github": github }
 
         autograded = {}
+        late_days = { "netid": email[:-14] }
         for asgn in assignments:
             autograded[asgn] = []
+            late_days[asgn] = 0
             repo = syscall.read_key(bytes(f"{req['course']}/assignments/{asgn}/{email}", "utf-8")).decode("utf-8")
             if repo == "":
                 continue
@@ -69,6 +72,10 @@ def handle(req, syscall):
                 grade = json.loads(grade)
                 autograded[asgn].append((grade["push_date"], grade.get("given", 0), grade.get("fixed", False)))
             autograded[asgn].sort(key=lambda t: t[0])
+
+            deadline = datetime.strptime(assignments[asgn]["soft_deadline"], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc).timestamp()
+            if len(autograded[asgn]) > 0 and autograded[asgn][-1][0] >= deadline:
+                late_days[asgn] = timedelta(seconds=autograded[asgn][-1][0]-deadline) // timedelta(days=1) + 1
 
             # other categories
             if "extra_grades" in all_keys:
@@ -95,7 +102,9 @@ def handle(req, syscall):
         for asgn in assignments:
             student[f"{asgn}-autograder"] = max_grade_alloc.get(asgn)
         student_grades.append(student)
+        student_late_days.append(late_days)
 
+    # grades csv
     fieldnames = ["lastname", "firstname", "netid", "github"]
     max_student = {"lastname": "MAX", "firstname": "POSSIBLE"}
     for asgn, categories in maxes.items():
@@ -108,4 +117,12 @@ def handle(req, syscall):
     writer.writeheader()
     writer.writerow(max_student)
     writer.writerows(student_grades)
-    return { "results": s.getvalue() }
+
+    # late days csv
+    fieldnames = ["netid"] + list(assignments.keys())
+    s2 = io.StringIO()
+    writer = csv.DictWriter(s2, fieldnames=fieldnames)
+    writer.writeheader()
+    writer.writerows(student_late_days)
+
+    return { "grades": s.getvalue(), "late days": s2.getvalue() }
