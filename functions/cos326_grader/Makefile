@@ -2,9 +2,9 @@ SOURCES=workload.py
 
 OCAML_APK=ocaml-4.14.0-r0.apk
 OCAMLRUNTIME_APK=ocaml-runtime-4.14.0-r0.apk
-OCAMLNUM_APK=ocaml-num-1.4-r1.apk
-OCAMLNUM_DEV_APK=ocaml-num-dev-1.4-r1.apk
-DUNE_APK=dune-3.2.0-r1.apk
+OCAMLNUM_APK=ocaml-num-1.4-r2.apk
+OCAMLNUM_DEV_APK=ocaml-num-dev-1.4-r2.apk
+DUNE_APK=dune-3.5.0-r0.apk
 
 .PHONY: all
 all: out
@@ -13,7 +13,7 @@ ocaml-num-%.apk:
 	wget https://dl-cdn.alpinelinux.org/alpine/edge/testing/x86_64/$@
 
 %.apk:
-	wget https://dl-cdn.alpinelinux.org/alpine/v3.16/community/x86_64/$@
+	wget https://dl-cdn.alpinelinux.org/alpine/v3.17/community/x86_64/$@
 
 out/usr/bin/ocaml: ${OCAML_APK}
 	mkdir -p out
