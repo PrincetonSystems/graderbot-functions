@@ -16,7 +16,7 @@ def handle(req, syscall):
     return result
 
 def app_handle(args, context, syscall):
-    key = f"github/{context['repository']}/extra_grades"
+    key = f"github/{context['repository']}/extra"
     api_route = f"/repos/{context['repository']}/commits/{context['commit']}/comments"
 
     github_user = context["user"]
@@ -32,6 +32,7 @@ def app_handle(args, context, syscall):
     extra = json.loads(syscall.read_key(bytes(key, "utf-8")) or "{}")
     p1 = re.compile(r" *grade +(\w[\w/]*) +([+-]?\d+)( */ *(\d+))?", re.IGNORECASE)
     p2 = re.compile(r" *special +note: +(.+)", re.IGNORECASE)
+    p3 = re.compile(r" *extension +(\d+)", re.IGNORECASE)
     for num, line in enumerate(args["comment"].splitlines()):
         # end of header indicator
         if line == "":
@@ -48,6 +49,11 @@ def app_handle(args, context, syscall):
         match = p2.match(line)
         if match:
             extra.setdefault("special note", []).append(match.group(1))
+            continue
+
+        match = p3.match(line)
+        if match:
+            extra["extension granted"] = int(match.group(1))
             continue
 
         # could not match header line to any pattern
