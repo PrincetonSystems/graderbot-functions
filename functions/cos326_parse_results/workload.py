@@ -1,7 +1,7 @@
 import copy
-from datetime import datetime, timezone
 import json
 import re
+from datetime import datetime, timezone
 
 def handle(req, syscall):
     args = req["args"]
@@ -18,15 +18,15 @@ def handle(req, syscall):
     return result
 
 def parse_results(results):
-    """Parses `results` to calculate grades.
-    Returns two dictionaries, the first of which contains
+    """Parse `results` to calculate grades.
+    Return two dictionaries, the first of which contains the fields
         "passed": number of problems passed
         "points": number of points given
         "probs": total number of problems
         "total_points": total number of points that are autograded
         "pending": total number of pending points
-    and the second has the same field names as the first, but which correspond
-    to the optional variant.
+    and the second has the same fields as the first, but which correspond to the
+    optional variant.
     """
     stats = {
         "passed": 0,
@@ -79,17 +79,15 @@ def app_handle(args, context, syscall):
     timestamp = datetime.utcfromtimestamp(context["push_date"]).replace(tzinfo=timezone.utc).astimezone(tz=None).strftime("%D %T %z")
     final_report.append(bytes(f"Submitted {timestamp}\n", "utf-8"))
 
-    if "results" in args:
-        stats, opt_stats = parse_results(syscall.read_key(bytes(args["results"], "utf-8")).decode("utf-8"))
-    else:
-        stats, opt_stats = parse_results("")
+    stats, opt_stats = parse_results(syscall.read_key(bytes(args["results"], "utf-8")).decode("utf-8"))
 
+    # grade summary
     summary = []
     if stats["total_points"] != 0:
-        summary.append(f"## Grade: {100*stats['points']/stats['total_points']:.2f}%\n")
-        summary.append(f"- Problems passed: {stats['passed']} / {stats['probs']}")
-        summary.append("- Points awarded:")
-        summary.append(f"    - Given: {stats['points']} / {stats['total_points']}")
+        summary.append(f"## Grade: {100*stats['points']/stats['total_points']:.2f}%\n\n"
+                       f"- Problems passed: {stats['passed']} / {stats['probs']}\n"
+                        "- Points awarded:\n"
+                       f"    - Given: {stats['points']} / {stats['total_points']}")
         if stats["pending"] != 0:
             summary.append(f"    - Pending: _ / {stats['pending']}")
         if opt_stats["probs"] != 0:
@@ -113,6 +111,7 @@ def app_handle(args, context, syscall):
             "grade": 0,
             "push_date": context["push_date"]
         }
+
     if "fixed" in args:
         grades["fixed"] = True
     syscall.write_key(bytes(key + "/grade.json", "utf-8"), bytes(json.dumps(grades), "utf-8"))
@@ -123,7 +122,7 @@ def app_handle(args, context, syscall):
         final_report.append(initial_report)
     else:
         final_report.append(b"Your code raised an exception before the grading"
-                            b" code could run, so this is all we could do.")
+                            b" code could run, so this is the best we could do.")
 
     syscall.write_key(bytes(report_key, "utf-8"), b"\n".join(final_report))
     return { "report": report_key }
