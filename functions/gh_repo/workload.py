@@ -17,6 +17,7 @@ def commit_comment(req, syscall):
             "context": {
                 "repository": req["repository"]["full_name"],
                 "commit": req["comment"]["commit_id"],
+                "comment_date": req["comment"]["created_at"],
                 "user": req["comment"]["user"]["login"]
             }
         }))
