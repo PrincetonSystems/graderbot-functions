@@ -29,6 +29,7 @@ def app_handle(args, context, syscall):
     if not user:
         return {}
 
+    includes_grade = False
     extra = json.loads(syscall.read_key(bytes(key, "utf-8")) or "{}")
     p1 = re.compile(r" *grade +(\w[\w/]*) +([+-]?\d+)( */ *(\d+))?", re.IGNORECASE)
     p2 = re.compile(r" *special +note: +(.+)", re.IGNORECASE)
@@ -40,6 +41,7 @@ def app_handle(args, context, syscall):
 
         match = p1.match(line)
         if match:
+            includes_grade = True
             grade = { "earned": int(match.group(2)) }
             if match.group(4):
                 grade["total"] = int(match.group(4))
@@ -66,11 +68,13 @@ def app_handle(args, context, syscall):
         return {}
 
     if user["type"] == "Staff":
-        if "repo graders" in extra:
-            extra["repo graders"] = list(set(extra["repo graders"]) | {github_user})
-        else:
-            extra["repo graders"] = [github_user]
-        extra["commit graded"] = context["commit"]
+        if includes_grade:
+            if "repo graders" in extra:
+                extra["repo graders"] = list(set(extra["repo graders"] + [github_user]))
+            else:
+                extra["repo graders"] = [github_user]
+            extra["commit graded"] = context["commit"]
+            extra["last graded"] = context["comment_date"]
         syscall.write_key(bytes(key, "utf-8"), bytes(json.dumps(extra), "utf-8"))
         return { "remarks": key }
     else:
